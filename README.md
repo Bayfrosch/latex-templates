@@ -1,5 +1,58 @@
 # latex-templates
-This repository includes a latex package with templates.
+Matching LaTeX templates for Beamer presentations and printable sheets.
+
+## Sheet class
+
+`baysheet.cls` extends `article` with an A4 layout, a title at the top of the
+first page, a running header on subsequent pages, and a centered page number
+in every footer. Body text uses Fira Sans, inline monospace uses Fira Mono,
+and code uses Fira Code, exactly as in `baybeamer`. Links are blue.
+
+Start with `import/sheet.tex`, or use:
+
+```latex
+\documentclass[onecolumn]{baysheet} % Or twocolumn; default: onecolumn
+\title{Programming with clarity}
+\author{Your full name}
+\date{\today}
+\sheetheader{Programming with clarity} % Optional; defaults to the title
+
+\begin{document}
+\maketitle
+\section{Exercise}
+Explain why this function is pure.
+
+\begin{python}
+def square(x):
+    return x * x
+\end{python}
+
+\begin{solutionbox}{Worked answer}
+The result depends only on the input, with no observable side effects.
+\end{solutionbox}
+\end{document}
+```
+
+The title spans the full width in either column mode; text starts beneath it.
+The header can be shortened with `\sheetheader{Short title}`. Standard article
+commands, figures, lists, and math work normally. `\date{}` omits the date.
+The running header shows the title on the left and author on the right,
+with a thin rule beneath them.
+Paragraphs have no indentation and are separated by one empty line.
+
+Every body-text line receives a consecutive line number, continuing across
+columns and pages. Colored boxes, document and section titles, running headers,
+footers, and figures (including captions) are excluded. Listings retain their
+own code line numbers; use
+`\begin{python}[numbers=none]` to hide them. The `definitionbox`, `examplebox`,
+`hintbox`, `solutionbox`, `java`, `haskell`, and `python` environments use the
+same interface and styling as Beamer. No `frame` or `fragile` option is needed
+in a sheet. As in Beamer, each box must fit within one page or column; split
+long explanations into separate boxes.
+
+Build the sheet with `make documents` (or build it together with the
+presentations using `make`). The PDF is `build/sheet/sheet.pdf`. Both Bay classes
+require LuaLaTeX; the builder selects it automatically.
 
 ## Personal Beamer class
 
@@ -8,8 +61,12 @@ listings from Florian Sihler's **xlistings**, and four kinds of colored boxes.
 
 ```text
 stylesheets/baybeamer.cls       Class: options, packages, code, and boxes
+stylesheets/baysheet.cls        Class: sheet layout and line numbers
+stylesheets/baycontent.sty      Shared fonts, code listings, and colored boxes
+stylesheets/baycolors.sty       Shared palette
 stylesheets/beamerthemeBay.sty  Theme: colors and slide furniture
 import/beamer.tex           Complete presentation: metadata and all slides
+import/sheet.tex                Complete sheet example
 Makefile                       Selects the input folder and build target
 scripts/build.py               Discovers documents and invokes latexmk
 vendor/xlistings/              Unmodified upstream package and license
@@ -20,8 +77,8 @@ THIRD_PARTY_NOTICES.md         Attribution and pinned source revision
 ## Build a folder of documents
 
 Requirements: Python 3.9+, Make, latexmk, and a TeX installation with LuaLaTeX,
-fontspec, Fira Sans/Mono (`fira`), Beamer, tcolorbox, listings, listingsutf8, and
-lstautogobble. On Debian/Ubuntu, install `texlive-luatex`, `texlive-latex-extra`,
+fontspec, Fira Sans/Mono (`fira`), Beamer, tcolorbox, listings, listingsutf8,
+lstautogobble, geometry, fancyhdr, parskip, and lineno. On Debian/Ubuntu, install `texlive-luatex`, `texlive-latex-extra`,
 and `texlive-fonts-extra` alongside `latexmk`. The LuaLaTeX binary alone is not
 enough: its `luaotfload` font loader must also be installed. xlistings and Fira
 Code are bundled. No external syntax highlighter or shell escape is needed.
@@ -38,8 +95,9 @@ Run these commands from this repository's root. The input folder is scanned
 recursively. Class names are read from literal `\documentclass` declarations:
 
 - `baybeamer`: build animated and handout versions using LuaLaTeX.
-- All other classes (such as `article`, `report`, or a future custom article
-  class): compile once using the selected class and pdfLaTeX.
+- `baysheet`: compile once using LuaLaTeX.
+- All other classes (such as `article` or `report`): compile once using the
+  selected class and pdfLaTeX.
 - `.tex` files without `\documentclass`: skip as included content.
 
 Class detection handles ordinary comments and multiline declarations. It does
@@ -68,6 +126,7 @@ different subfolders cannot overwrite each other:
 ```text
 import/beamer.tex          -> build/beamer/beamer-animated.pdf
                           -> build/beamer/beamer-handout.pdf
+import/sheet.tex           -> build/sheet/sheet.pdf
 import/report.tex         -> build/report/report.pdf
 import/course/report.tex  -> build/course/report/report.pdf
 ```
@@ -128,7 +187,7 @@ Normal text uses Fira Sans.
 {\BayCodeFont Inline text explicitly using Fira Code.}
 ```
 
-`make` selects LuaLaTeX automatically for `baybeamer`; select LuaLaTeX explicitly
+`make` selects LuaLaTeX automatically for `baybeamer` and `baysheet`; select LuaLaTeX explicitly
 in an editor or when using latexmk directly. Math keeps Beamer's math fonts.
 Fira Code's italic styles are synthesized from the regular/bold fonts because
 the upstream family has no italic files. Listing rendering is still controlled
@@ -160,8 +219,7 @@ name in the footer, use `\author[Short name]{Full name}`.
 Sections organize navigation without adding section slides or section headings.
 The current subsection supplies a text-only header (no background box) on every
 non-plain frame, prefixed with its section and subsection number (e.g. `1.1`).
-The number uses the light blue `BayNumber` (`#7DB7DC`) defined in
-`stylesheets/beamerthemeBay.sty`:
+The number uses `BayNumber`, defined in `stylesheets/baycolors.sty`:
 
 ```latex
 \section[Basics]{Programming fundamentals}
@@ -227,7 +285,7 @@ Type keywords such as `int` and `float` use `BayCodeType` (`#5CF708`).
 Other keywords use the original red (`BayPrimary!65!black`), with bold primary keywords.
 Numeric values and their prefixes use the lighter red `BayPrimary` (`#E06666`).
 Variable and function names are black. Strings and italic comments use darker
-purple shades; line numbers use dark gray. The base colors are defined in the theme `.sty`.
+purple shades; line numbers use dark gray. The base colors are defined in `baycolors.sty`.
 These environments are verbatim: keep their closing commands on separate lines.
 See `import/beamer.tex` for complete examples of all three languages.
 
@@ -254,7 +312,7 @@ Each box accepts a required title and optional tcolorbox settings:
 \end{solutionbox}
 ```
 
-The palette is defined centrally in `stylesheets/beamerthemeBay.sty`:
+The shared palette is defined centrally in `stylesheets/baycolors.sty`:
 
 | Element | Outline and header fill | Body fill |
 | --- | --- | --- |
@@ -283,7 +341,8 @@ $ENV{'TTFONTS'} = './vendor/firacode//:' . ($ENV{'TTFONTS'} // '');
 $pdf_mode = 4; # LuaLaTeX
 ```
 
-Then use `\documentclass[animated]{baybeamer}` (or `[handout]`) in your main
+Then use `\documentclass[animated]{baybeamer}` (or `[handout]`), or
+`\documentclass[onecolumn]{baysheet}` (or `[twocolumn]`), in your main
 `.tex` file. Compile with LuaLaTeX from that project's root. The trailing colon preserves
 TeX's standard search paths. With editors or Overleaf, ensure their build uses
 these same paths. Alternatively install the class, theme, and xlistings into
@@ -303,10 +362,11 @@ redistribution details. Customizations live in our class, not upstream files.
 With Python 3 and Poppler's `pdftotext`, `pdftohtml`, and `pdffonts` installed, run:
 
 ```sh
-python3 tests/check_template.py
+python3 tests/check_sheet.py
 ```
 
-This checks discovery of mixed classes in an external folder, nested filenames,
-relative inputs, target selection, missing folders, both presentation modes,
-solution visibility, page counts, subsection headers, author footer, clickable
-section destinations, embedded Fira fonts in both PDFs, and conflicting class flags.
+This compiles sheets in both column layouts alongside an ordinary article in
+an external source folder. It checks consecutive line numbers and colored-box
+exclusions, paragraph spacing, natural page and column breaks, full-width titles, subsequent-page
+headers, footer page numbers, embedded Fira fonts, clickable blue links, and
+overflow. Run `make presentation` to compile both Beamer modes as well.

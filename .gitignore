@@ -1,5 +1,5 @@
 /build/
-
+/tests/
 # LaTeX output from builds outside /build/ (for example, in an editor).
 *.aux
 *.fdb_latexmk

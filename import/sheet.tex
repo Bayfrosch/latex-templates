@@ -1,0 +1,83 @@
+% Choose onecolumn (default) or twocolumn.
+\documentclass[onecolumn]{baysheet}
+
+\title{Programming with clarity}
+\author{Your full name}
+\date{\today}
+\sheetheader{Programming with clarity}
+
+\begin{document}
+\maketitle
+
+\section{Pure functions}
+A pure function returns the same result for the same input and has no
+observable side effects. This sheet uses the same fonts, colors, boxes,
+and code listings as the presentation template. Change the class option
+to \texttt{twocolumn} to set the body in two columns; the title still spans
+the full page width.
+
+\begin{definitionbox}{Pure function}
+The result depends only on the function's inputs. Evaluating the function
+does not change any state outside the function.
+\end{definitionbox}
+
+\subsection{Working with a list}
+For the input $[1,2,3,4]$, square each value and then add the results.
+The sum is $1+4+9+16=30$. Inline identifiers such as
+\texttt{sum\_of\_squares} use Fira Mono.
+
+\begin{examplebox}{Squaring a number}
+The function $f(x)=x^2$ maps $4$ to $16$ every time it is evaluated.
+\end{examplebox}
+
+\begin{hintbox}{Break it down}
+Square each number before adding the results. You can check the result
+by calculating the squares separately.
+\end{hintbox}
+
+Read more about the language in the
+\href{https://docs.python.org/3/tutorial/}{Python tutorial}.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\rule{0pt}{12mm}\rule{.65\linewidth}{0pt}}
+\caption{Replace this placeholder with your own figure.}
+\end{figure}
+
+\section{Code and practice}
+From the second page onward, the title appears in the running header.
+Every page has its page number in the footer.
+Listings can use their own line numbers, separate from the prose line
+numbers, by passing \texttt{numbers=left}.
+
+\begin{python}[numbers=left]
+def sum_of_squares(values):
+    return sum(x * x for x in values)
+
+print(sum_of_squares([1, 2, 3, 4]))
+\end{python}
+
+\begin{java}
+int square(int x) {
+    return x * x;
+}
+\end{java}
+
+\begin{haskell}
+square :: Integer -> Integer
+square x = x * x
+\end{haskell}
+
+\subsection{Try it yourself}
+Compute the sum of squares for $[2,3,5]$. Use the same steps as in the
+example on the first page, and compare your result with the solution.
+
+\begin{solutionbox}{Worked answer}
+The squares are $4$, $9$, and $25$. Adding them gives
+$2^2+3^2+5^2=4+9+25=38$.
+\end{solutionbox}
+
+Explain why the function is pure and how you would test it with an empty
+list. A good explanation distinguishes the input, the returned value,
+and any effects on the surrounding program.
+\end{document}

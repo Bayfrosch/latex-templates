@@ -48,7 +48,7 @@ def build(input_dir, output_dir, target):
         else:
             modes = [None] if target in ('all', 'documents') else []
         for mode in modes:
-            jobs.append((source, mode))
+            jobs.append((source, mode, cls))
 
     if not jobs:
         raise ValueError(f'No documents matching target "{target}" in {input_dir}')
@@ -62,12 +62,12 @@ def build(input_dir, output_dir, target):
     cache.mkdir(parents=True, exist_ok=True)
     env.setdefault('TEXMFCACHE', str(cache))
     env.setdefault('TEXMFVAR', str(cache))
-    for source, mode in jobs:
+    for source, mode, cls in jobs:
         destination = output_dir / source.relative_to(input_dir).with_suffix('')
         destination.mkdir(parents=True, exist_ok=True)
         jobname = source.stem + (f'-{mode}' if mode else '')
         command = ['latexmk', '-norc', '-r', str(ROOT / '.latexmkrc'),
-                   '-lualatex' if mode else '-pdf',
+                   '-lualatex' if mode or cls == 'baysheet' else '-pdf',
                    '-interaction=nonstopmode', '-halt-on-error',
                    f'-outdir={destination}', f'-jobname={jobname}']
         if mode:
