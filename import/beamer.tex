@@ -1,0 +1,103 @@
+% The build command can override this default before reading the document.
+\providecommand{\BayMode}{animated}
+\documentclass[\BayMode]{baybeamer}
+
+% Mark animation steps with \pause, \uncover<2->{...}, or [<+->].
+\title{Programming with clarity}
+\author[Your name]{Your full name} % Optional short name is used in the footer.
+\date{\today}
+
+\begin{document}
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+\section{Concepts}
+\subsection{Definitions and examples}
+\begin{frame}
+  \begin{definitionbox}{Pure function}
+    A pure function returns the same result for the same input and has
+    no observable side effects.
+  \end{definitionbox}
+  \begin{examplebox}{Squaring a number}
+    The function $f(x)=x^2$ maps $4$ to $16$, every time it is evaluated.
+  \end{examplebox}
+\end{frame}
+
+\subsection{A step-by-step explanation}
+\begin{frame}
+  \begin{enumerate}[<+->]
+    \item Start with the input values: $[1,2,3,4]$.
+    \item Square each value: $[1,4,9,16]$.
+    \item Add the results: $1+4+9+16=30$.
+  \end{enumerate}
+\end{frame}
+
+\section{Code listings}
+\subsection{Java: sum of squares}
+% Frames containing literal code must be marked fragile.
+\begin{frame}[fragile]
+\begin{java}
+public class SumOfSquares {
+    static int sumOfSquares(int[] values) {
+        int total = 0;
+        for (int value : values) {
+            total += value * value;
+        }
+        return total;
+    }
+}
+\end{java}
+\end{frame}
+
+\subsection{Haskell: sum of squares}
+\begin{frame}[fragile]
+\begin{haskell}
+-- Compose two pure functions.
+sumOfSquares :: [Integer] -> Integer
+sumOfSquares = sum . map (\x -> x * x)
+
+main :: IO ()
+main = print (sumOfSquares [1, 2, 3, 4])
+\end{haskell}
+  \begin{hintbox}{Function composition}
+    Read the composition from right to left: first map, then sum.
+  \end{hintbox}
+\end{frame}
+
+\subsection{Python: sum of squares}
+\begin{frame}[fragile]
+\begin{python}
+def sum_of_squares(values: list[int]) -> int:
+    # A generator avoids building an intermediate list.
+    return sum(value * value for value in values)
+
+print(sum_of_squares([1, 2, 3, 4]))  # 30
+\end{python}
+Inline identifiers use Fira Mono: \texttt{sum\_of\_squares}.
+\end{frame}
+
+\section{Practice}
+\subsection{Exercise and solution}
+\begin{frame}
+  \begin{examplebox}{Try it yourself}
+    Compute the sum of squares for $[2,3,5]$.
+  \end{examplebox}
+  \begin{hintbox}{Break it down}
+    Square each number before adding the results.
+  \end{hintbox}
+  \pause
+  \begin{solutionbox}{Worked answer}
+    $2^2+3^2+5^2=4+9+25=38$.
+  \end{solutionbox}
+\end{frame}
+
+\subsection{Takeaways}
+\begin{frame}
+  \begin{itemize}
+    \item The same algorithm can be expressed in different languages.
+    \item Definitions, examples, hints, and solutions have distinct boxes.
+    \item The handout includes all steps and solutions on one page per frame.
+  \end{itemize}
+\end{frame}
+\end{document}

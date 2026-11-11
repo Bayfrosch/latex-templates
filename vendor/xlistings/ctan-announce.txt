@@ -1,0 +1,9 @@
+xlistings v1.1.1
+
+code-link, which xlistings v1.1.0 shipped, is now a package of its own on
+CTAN. This release removes it from xlistings and has no other changes.
+
+The package is licensed under the LaTeX Project Public License 1.3c.
+
+Sources, issue tracker, and documentation:
+https://github.com/EagleoutIce/xlistings

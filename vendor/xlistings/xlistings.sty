@@ -1,0 +1,849 @@
+% xlistings.sty
+% This package is not intended to work with the 'minted'-Package
+%
+% Copyright (C) 2024-2026 Florian Sihler
+%
+% This work may be distributed and/or modified under the conditions of
+% the LaTeX Project Public License, either version 1.3c of this license
+% or (at your option) any later version. The latest version of this
+% license is in https://www.latex-project.org/lppl.txt and version 1.3c
+% or later is part of all distributions of LaTeX version 2008 or later.
+%
+% This work has the LPPL maintenance status 'maintained'.
+% The Current Maintainer of this work is Florian Sihler.
+%
+% This work consists of the file xlistings.sty, the language definitions
+% langs/xlistings-*.cfg, and the documentation xlistings-doc.tex.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{xlistings}[2026/11/11 v1.1.1 extended listings]
+
+% TODO: auto fallback to lstlistings
+% TODO: fail if language is not found!
+% TODO: allow to post add language specific keywords
+% TODO: link to doc support like magic haskell
+\RequirePackage{kvoptions}
+
+\SetupKeyvalOptions{family=xlst,prefix=@xlst@}
+
+\DeclareBoolOption{print}                           % in print, ink will be reduced, adapted to gray scale
+\DeclareComplementaryOption{digital}{print}
+\DeclareBoolOption[true]{guardspace}                % ensure that listings are not broken over pages
+\DeclareBoolOption{numinpar}                        % if enabled numbers would be outside of the left margin
+\DeclareBoolOption[true]{hlnumbers}                 % highlight numbers
+\DeclareBoolOption{upshape}                         % upshape for basic style
+\DeclareBoolOption{inlinesize}                      % don't change font?
+\DeclareBoolOption{highlights}                      % special (tikz based) highlights
+\DeclareBoolOption[true]{fakeminted}                % use minted for output
+\DeclareBoolOption{extendednums}                    % extended number support
+\DeclareBoolOption{debug}                           % debug output
+\DeclareStringOption[default]{style}                % the (default) style to use
+
+% internals:
+\newif\ifxlst@lst@lastwas@character@ % last segment was from char-class
+\newif\ifxlst@lst@lastwas@charkeep@  % in char-mode (pass through)
+\newif\ifxlst@lst@innumber@          % last segment was a highlighted number
+\newif\ifxlst@lst@inhex@             % within a 0x-prefixed literal
+
+\ProcessKeyvalOptions*
+\newif\if@xlst@accuspp@available@ % remove line numbers from selection if possible
+
+\if@xlst@debug\let\xlst@debug\typeout\else\let\xlst@debug\@gobble\fi
+
+\newdimen\xlst@length@lst@numsep       \xlst@length@lst@numsep=9\p@
+\newdimen\xlst@length@lst@famerule     \xlst@length@lst@famerule=.75\p@
+\newdimen\xlst@length@lst@xleftmargin  \xlst@length@lst@xleftmargin=3\p@
+\newdimen\xlst@length@lst@xrightmargin \xlst@length@lst@xrightmargin=3\p@
+
+\RequirePackage{etoolbox}
+\RequirePackage{xcolor}
+\RequirePackage{pgfkeys}
+
+\def\xlstsetstyle#1{\def\xlst@style@default{#1}}
+\xlstsetstyle{\@xlst@style}
+
+% Listings-Base:
+% listingsutf8 only decodes UTF-8 if inputenc was loaded explicitly, not with the
+% implicit default of the format
+\IfFileExists{listingsutf8.sty}{\@ifpackageloaded{inputenc}{}{\RequirePackage[utf8]{inputenc}}\RequirePackage{listingsutf8}}{\RequirePackage{listings}}
+\IfFileExists{accsupp.sty}{\RequirePackage{accsupp}\@xlst@accuspp@available@true}{\@xlst@accuspp@available@false}%
+\RequirePackage{lstautogobble}
+\RequirePackage{amsbsy}% \pmb for the lambda literate
+
+% in the future we may want to use something like https://tex.stackexchange.com/a/728534
+% [* to overwrite + to append] #1 language, #2 overwrite
+\def\xlstlangoverride{\@ifstar\@xlstlangoverride@overwrite\@xlstlangoverride@append}
+\def\@xlstlangoverride@overwrite#1#2{\csdef{xlst@@lang@#1}{#2}}%
+\def\@xlstlangoverride@append#1#2{\csgappto{xlst@@lang@#1}{,#2}}%
+
+% #1: language to overwrite
+\def\xlst@get@overwrites#1{%
+    \ifcsname xlst@@lang@#1\endcsname\csname xlst@@lang@#1\endcsname\else\@empty\fi
+}
+% define the lstkey
+% working with lstset and setting lstkeys broke stuff (realizing this was very painful), so we go the bottom route
+\define@key{lst}{language addons}{\protected@edef\@tmp{\noexpand\setkeys{lst}{\xlst@get@overwrites{#1}}}\@tmp}% \protected@edef\@tmp{\noexpand
+
+\if@xlst@accuspp@available@
+\def\xlst@lst@prebreak{\rlap{\BeginAccSupp{method=escape,ActualText={}}\xlst@font@fs@numbers$\hookleftarrow$\EndAccSupp{}}}
+\else
+\def\xlst@lst@prebreak{\rlap{\xlst@font@fs@numbers$\hookleftarrow$}}
+\fi
+\let\xlst@lst@inline@prebreak\xlst@lst@prebreak
+% the marker for a line break that was written out by hand, unselectable like the one of 'prebreak'
+\if@xlst@accuspp@available@
+\def\xlst@lst@brmark{\BeginAccSupp{method=escape,ActualText={}}\color{xlst@colors@lst@linenumbers}$\hookleftarrow$\EndAccSupp{}}
+\else
+\def\xlst@lst@brmark{\color{xlst@colors@lst@linenumbers}$\hookleftarrow$}
+\fi
+
+\if@xlst@guardspace\RequirePackage{needspace}\fi
+\if@xlst@highlights\RequirePackage{tikz}\fi
+
+\let\xlst@ttfamily\ttfamily
+
+\def\xlst@font@fs@numbers{\footnotesize}
+\def\xlstNumFs#1{\gdef\xlst@font@fs@numbers{#1}}
+\def\xlst@font@fs@normal{}
+
+\newcommand*\lstfs[1][1]{\@ifstar{\@lstfs@star{#1}}{\@lstfs{#1}}}
+\def\@lstfs@star#1{\protected@edef\@tmp{\noexpand\@lstfs{#1}{\xlst@font@size}}\@tmp}
+% #1 linespread, #2 font size in pt
+\def\@lstfs#1#2{%
+  \def\xlst@font@fs@normal{\fontsize{#2}{#2}\linespread{#1}\selectfont}%
+  \ifnum#2>7\protected@edef\xlst@lst@@subfs{\the\numexpr #2-4}\def\xlst@font@fs@numbers{\fontsize\xlst@lst@@subfs\xlst@lst@@subfs\linespread{#1}\selectfont}%
+  \else\def\xlst@font@fs@numbers{\tiny\linespread{#1}}\fi
+}
+
+% Color & Style Definitions
+\if@xlst@print
+\definecolor{xlst@colors@border}{HTML}{DDDFE2}
+\definecolor{xlst@colors@background}{HTML}{FFFFFF}% save ink :D
+\else
+\definecolor{xlst@colors@border}{HTML}{E4E8EF}
+\definecolor{xlst@colors@background}{HTML}{FAFBFD}
+\fi
+
+% default palette
+% The colors share one perceived lightness (OKLCH L about .54), keywordB and
+% keywordC are a lighter and a darker step of keywordA.
+\definecolor{xlst@colors@lst@keywordA}{RGB}{177,48,101} % e.g.: class, public, static...
+\definecolor{xlst@colors@lst@keywordB}{RGB}{193,88,125} % e.g.: int, double ...
+\definecolor{xlst@colors@lst@keywordC}{RGB}{143,32,79} % e.g.: class-names?
+\definecolor{xlst@colors@lst@numbers}{RGB}{0,127,138} % well, numbers
+\definecolor{xlst@colors@lst@numprefix}{RGB}{110,120,145} % the '0x' of '0x2a'
+\definecolor{xlst@colors@lst@literals}{RGB}{173,92,21} % strings and friends
+\definecolor{xlst@colors@lst@comments}{RGB}{112,122,142} % well, comments
+\definecolor{xlst@colors@lst@highlight}{RGB}{37,131,67} % sweetspots
+\colorlet{xlst@colors@lst@command}{xlst@colors@lst@keywordB} % sweetspots
+\definecolor{xlst@colors@lst@linenumbers}{RGB}{152,162,179}
+
+% define the styling definitions
+% as we don't know, if 'foreach' is available, we will built our own iter:
+\def\xlst@lst@style@iter@step#1: #2\@nil{%
+\ifx!#1!\else
+  \expandafter\def\csname#1\endcsname{#2}%
+\fi}
+
+\def\xlst@lst@style@iter#1,#2\@nil{%
+\ifx!#1!\else
+  \xlst@lst@style@iter@step xlst@styles@lst@#1\@nil
+  \ifx!#2!\else\xlst@lst@style@iter#2,\@nil\fi\fi}
+
+\def\xlstSetStyle#1#2{\expandafter\def\csname xlst@styles@lst@#1\endcsname{#2}}
+
+\def\xlst@list@define@styles#1{\xlst@lst@style@iter#1,\@nil}
+\let\xlstDefineStyles\xlst@list@define@styles
+% we will write the colors anyway. This way it is easy visible on how to change the
+% styles. Will define e.g. \xlst@styles@lst@keywo
+\if@xlst@print
+\xlst@list@define@styles{%
+ {keywordA: \@declaredcolor{xlst@colors@lst@keywordA}\bfseries},%
+ {keywordB: \@declaredcolor{xlst@colors@lst@keywordB}},%
+ {keywordC: \@declaredcolor{xlst@colors@lst@keywordC}},%
+ {keywordD: \itshape},%
+ {numbers:  \@declaredcolor{xlst@colors@lst@numbers}\itshape},%
+ {numprefix: \@declaredcolor{xlst@colors@lst@numprefix}},%
+ {literals: \@declaredcolor{xlst@colors@lst@literals}\itshape},%
+ {comments: \@declaredcolor{xlst@colors@lst@comments}},% \scshape
+ {basic: \xlst@ttfamily},%
+ {command:  \@declaredcolor{xlst@colors@lst@command}},%
+ {highlight: \@declaredcolor{xlst@colors@lst@highlight}\itshape},%
+ {linenumbers: \@declaredcolor{xlst@colors@lst@linenumbers}\xlst@font@fs@numbers\sffamily}%
+}
+\else
+\xlst@list@define@styles{%
+ {keywordA: \@declaredcolor{xlst@colors@lst@keywordA}},%
+ {keywordB: \@declaredcolor{xlst@colors@lst@keywordB}},%
+ {keywordC: \@declaredcolor{xlst@colors@lst@keywordC}},%
+ {keywordD: \itshape},%
+ {numbers:  \@declaredcolor{xlst@colors@lst@numbers}},%
+ {numprefix: \@declaredcolor{xlst@colors@lst@numprefix}},%
+ {literals: \@declaredcolor{xlst@colors@lst@literals}},%
+ {comments: \@declaredcolor{xlst@colors@lst@comments}},%
+ {basic:    \xlst@ttfamily},%
+ {command:  \@declaredcolor{xlst@colors@lst@command}},%
+ {linenumbers: \@declaredcolor{xlst@colors@lst@linenumbers}\xlst@font@fs@numbers\sffamily},%
+ {highlight:   \@declaredcolor{xlst@colors@lst@highlight}\itshape}%
+}
+\fi
+
+\if@xlst@upshape
+\xlst@list@define@styles{{basic: \xlst@ttfamily\upshape},}
+\fi
+
+% Helper Functions
+\def\xlst@font@size{\the\numexpr\dimexpr\f@size\p@\relax/65536\relax}
+
+% We want language specific literate additions:
+\def\xlst@lst@addToLiterate#1{\protected@edef\lst@literate{\unexpanded\expandafter{\lst@literate}\unexpanded{#1}}}
+\lst@Key{add to literate}{}{\xlst@lst@addToLiterate{#1}}
+
+
+% If possible we want to make the line numbers unmarkable, so you can copy
+% code without selecting them:
+% locally blacklist some numbers
+\newif\if@xlst@lst@blacklist@is@ghost@
+\let\xlstblacklistisghost\@xlst@lst@blacklist@is@ghost@true
+\let\xlstblacklistispresent\@xlst@lst@blacklist@is@ghost@false
+\def\xlstblacklistlinenumbers{\@ifstar{\xlstblacklistispresent\@xlst@lst@blacklistlinenumers}{\xlstblacklistisghost\@xlst@lst@blacklistlinenumers}}
+\def\@xlst@lst@blacklistlinenumers#1{\@for\@num:={#1}\do{\expandafter\let\csname xlst@lst@nl@blacklist@\@num\endcsname\@empty}}
+% TODO: support for non-integer line markers by not adding stuff if ispresent is true?
+% we have to keep a different offset for blacklisted and ghost line numbers
+% 1. we must keep ranges intact and
+% 2. otherwise the line to be blacklisted would repeat
+\newcount\c@xlst@lst@blacklisted@linenum@counter
+\lst@AddToHook{PreInit}{\c@xlst@lst@blacklisted@linenum@counter\z@}
+
+\if@xlst@accuspp@available@
+\def\xlst@lst@num@consume#1{\@ifundefined{xlst@lst@nl@blacklist@#1}{\BeginAccSupp{method=escape,ActualText={}}\the\numexpr#1+\c@xlst@lst@blacklisted@linenum@counter\EndAccSupp{}}{\if@xlst@lst@blacklist@is@ghost@\global\advance\c@xlst@lst@blacklisted@linenum@counter\m@ne\fi}}
+\else\def\xlst@lst@num@consume#1{\@ifundefined{xlst@lst@nl@blacklist@#1}{\the\numexpr#1+\c@xlst@lst@blacklisted@linenum@counter}{\if@xlst@lst@blacklist@is@ghost@\global\advance\c@xlst@lst@blacklisted@linenum@counter\m@ne\fi}}
+\fi
+% So if possible we will eat the number and produce unmarkable text
+
+% Here we will make a small rainbow to present the selected color-theme :D
+\def\xlst@lst@showstyles@iter#1,#2\@nil{%
+\ifx!#1!\else
+ {\xlst@style@get{#1}#1\space}%
+ \ifx!#2!\else\xlst@lst@showstyles@iter#2,\@nil\fi% recursion
+\fi
+}
+
+\def\xlst@lst@showstyles#1{\xlst@lst@showstyles@iter#1,\@nil}
+\def\xlstStyles{\xlst@lst@showstyles{basic,keywordA,keywordB,keywordC,keywordD,numbers,linenumbers,literals,comments,highlight}}
+
+\def\xlst@style@get#1{\xlst@styles@lst@basic\csname xlst@styles@lst@#1\endcsname}
+\long\def\xlstGet#1#2{\begingroup\xlstGetStyle{#1}#2\endgroup}
+\let\xlstGetStyle\xlst@style@get
+
+\def\xlstSetLeftMargin#1{\setlength{\xlst@length@lst@xleftmargin}{#1}}
+\def\xlstSetRightMargin#1{\setlength{\xlst@length@lst@xrightmargin}{#1}}
+\def\xlstSetNumSep#1{\setlength{\xlst@length@lst@numsep}{#1}}
+\def\xlstSetFrameRule#1{\setlength{\xlst@length@lst@famerule}{#1}}
+\def\xlstPreBreak#1{\def\xlst@lst@prebreak{#1}}
+\def\xlstInlinePreBreak#1{\def\xlst@lst@inline@prebreak{#1}}
+% keys appended to every inline listing after its style, so that they win
+\def\xlst@inline@keys{}
+\def\xlstInlineKeys#1{\def\xlst@inline@keys{#1}}
+
+\def\@@xlst@numinpar@length{2em}
+\if@xlst@numinpar\xlstSetLeftMargin{\@@xlst@numinpar@length}\fi
+
+% Handling of automated number-highlighting in listings;
+% #1 style, #2 code to run if the segment starts a number, #3 the segment
+\def\xlst@lst@hl@num#1#2#3{\begingroup
+\ifxlst@lst@lastwas@character@
+\global\xlst@lst@lastwas@charkeep@true\xlst@lst@nonum#3\else\global\xlst@lst@lastwas@charkeep@false
+  \ifnum\lst@mode=\lst@Pmode\relax% PMode: Not in any special Mode
+  \xlst@lst@hl@num@{#1}{#2}{#3}% or if keywords are active:
+  \else\lst@ifkeywords\xlst@lst@hl@num@{#1}{#2}{#3}\else\xlst@lst@nonum#3\fi\fi
+\fi
+\endgroup}
+\def\xlst@lst@hl@num@#1#2#3{#2\global\xlst@lst@innumber@true{\xlst@style@get{#1}#3}}
+\def\xlst@@lst@hl@digit#1{\xlst@lst@hl@num{numbers}\@empty{#1}}
+% #1 marks the literal as hexadecimal
+\def\xlst@@lst@hl@prefix#1#2{\xlst@lst@hl@num{numprefix}{#1}{#2}}
+\def\xlst@lst@hex{\global\xlst@lst@inhex@true}
+\def\xlstdisablenumhl{\def\xlst@dgt##1{##1}\def\xlst@pfx##1##2{##2}}
+\def\xlstenablenumhl{\let\xlst@dgt\xlst@@lst@hl@digit\let\xlst@pfx\xlst@@lst@hl@prefix}
+\if@xlst@hlnumbers\xlstenablenumhl\else\xlstdisablenumhl\fi
+\def\xlst@lst@nonum{\ifxlst@lst@innumber@
+  \global\xlst@lst@innumber@false\global\xlst@lst@inhex@false\fi}
+% overwrite processor routines to adapt to number
+\def\xlst@lst@plainletter{%
+  \xlst@lst@nonum\xlst@lst@lastwas@character@true\lst@AppendLetter}
+\def\lst@ProcessLetter{%
+  \lst@whitespacefalse
+  \ifxlst@lst@innumber@\expandafter\xlst@lst@numletter\else\expandafter\xlst@lst@plainletter\fi}
+\def\lst@ProcessOther{%
+  \lst@whitespacefalse\xlst@lst@nonum\xlst@lst@lastwas@charkeep@false\xlst@lst@lastwas@character@false\lst@AppendOther}
+\def\lst@whitespacetrue{\xlst@lst@nonum\xlst@lst@lastwas@charkeep@false\xlst@lst@lastwas@character@false\global\let\lst@ifwhitespace\iftrue}
+\def\lst@whitespacefalse{\global\let\lst@ifwhitespace\iffalse}
+\lst@AddToHook{PreInit}{\xlst@lst@nonum
+  \global\xlst@lst@lastwas@character@false\global\xlst@lst@lastwas@charkeep@false}
+
+\def\xlst@nc{\ifxlst@lst@lastwas@charkeep@\else\xlst@lst@lastwas@character@false\fi}
+
+% A digit that follows a letter belongs to the identifier (as in paste0), so it is
+% appended to the current token instead of ending it. Otherwise, the identifier
+% would be output without the digit, and keywords or links would not match it.
+\newif\ifxlst@lst@inword@
+% #1 the matched text, #2 its length
+\def\xlst@lst@ifinword#1#2{\xlst@lst@inword@false
+  \ifxlst@lst@lastwas@character@\ifnum#2=\@ne
+    \in@{#1}{0123456789}\ifin@\xlst@lst@inword@true\fi
+  \fi\fi}
+% modify lst-literate routine to apply to the mechanism
+\def\lst@Literate#1#2#3{%
+\ifx\relax#2\@empty\else
+\lst@CArgX #1\relax\lst@CDef\relax
+  {\let\lst@next\@empty
+  \lst@ifxliterate
+  \lst@ifmode\let\lst@next\lst@CArgEmpty\fi
+  \fi\ifx\lst@next\@empty
+    \ifx\lst@OutputBox\@gobble\else
+    \xlst@lst@ifinword{#1}{#3}%
+    \ifxlst@lst@inword@
+    \lst@Append{#1}%
+    \else
+    \lst@XPrintToken \let\lst@scanmode\lst@scan@m
+    \lst@token{#2}\lst@length#3\relax
+    \lst@XPrintToken
+    \lst@whitespacefalse\xlst@nc
+    \fi
+    \fi
+    \let\lst@next\lst@CArgEmptyGobble
+  \fi\lst@next}%
+  \@empty% splitter for constants
+\expandafter\lst@Literate
+\fi}
+
+% The basic literate table
+\def\xlstSetLiterateTable{%
+\lstset{add to literate=%
+  {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {Á}{{\'A}}1 {É}{{\'E}}1
+  {ñ}{{\~n}}1 {Ñ}{{\~N}}1 {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c c}}1 {Ç}{{\c C}}1 {å}{{\aa}}1 {Å}{{\AA}}1
+  {œ}{{\oe}}1 {Œ}{{\OE}}1 {¿}{{\textquestiondown}}1 {¡}{{\textexclamdown}}1
+  {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1 {à}{{\`a}}1 {è}{{\`e}}1 {ì}{{\`i}}1 {ò}{{\`o}}1
+  {ù}{{\`u}}1 {À}{{\`A}}1 {È}{{\`E}}1 {Ì}{{\`I}}1 {Ò}{{\`O}}1 {Ù}{{\`U}}1 {ä}{{\"a}}1
+  {ë}{{\"e}}1 {ï}{{\"i}}1 {ö}{{\"o}}1 {ü}{{\"u}}1 {Ä}{{\"A}}1 {Ë}{{\"E}}1 {Ï}{{\"I}}1
+  {Ö}{{\"O}}1 {Ü}{{\"U}}1 {â}{{\^a}}1 {ê}{{\^e}}1 {î}{{\^i}}1 {ô}{{\^o}}1 {û}{{\^u}}1
+  {æ}{{\ae}}1 {Æ}{{\AE}}1 {ß}{{\ss}}1 {ø}{{\o}}1 {€}{{\texteuro}}1 {£}{{\pounds}}1
+  {:bs:}{{\@declaredcolor{xlst@colors@lst@keywordA}\textbackslash\normalcolor}}1 {:bmath:}{{\xlst@style@get{numbers}\$\normalcolor}}1 {:percent:}{{\%}}1
+  {:emath:}{{{\xlst@style@get{numbers}\$\normalcolor}}}1 {:dollar:}{{{\xlst@style@get{numbers}\$\normalcolor}}}1 {:plaindollar:}{{\$}}1%spaces
+  % brace fix
+  {:space:}{{{ }}}1 {:ws:}{{{ }}}1 {:cdots:}{{{$\cdots$}}}1 {:cdot:}{{{$\cdot$}}}1 {:ldots:}{{{\ldots}}}1  {:circ:}{{{\ensuremath{\circ}}}}1 {:!:}{{!}}1
+  {:c:}{{{}}}0 {:star:}{{*}}1 {:minus:}{{-}}1
+  {:float:}{{{\xlst@style@get{numbers}f\normalcolor}}}1 {:exp:}{{{\xlst@style@get{numbers}e\normalcolor}}}1 {:yields:}{{{$\rightarrow$}}}1%
+  {:lan:}{{{$\langle$\thinspace}}}1 {:ran:}{{{\thinspace$\rangle$}}}1 {:to:}{{{$\to$}}}2 {:equiv:}{{{$\equiv$}}}1%
+  {:<:}{{{\textcolor{xlst@colors@lst@linenumbers}{\(\langle\)}}}}1 {:>:}{{{\textcolor{xlst@colors@lst@linenumbers}{\(\rangle\)}}}}1 {:br:}{{{\xlst@lst@brmark}}}1
+  {:lambda:}{{{\ensuremath{\color{xlst@colors@lst@keywordA}\pmb{\lambda}}}}}1
+  {:bcmd:}{\@declaredcolor{xlst@colors@lst@keywordA}\textbackslash\normalcolor}1 {:ecmd:}{\normalcolor}0
+  {0}{{\xlst@dgt{0}}}1
+  {1}{{\xlst@dgt{1}}}1 {2}{{\xlst@dgt{2}}}1 {3}{{\xlst@dgt{3}}}1
+  {4}{{\xlst@dgt{4}}}1 {5}{{\xlst@dgt{5}}}1 {6}{{\xlst@dgt{6}}}1
+  {7}{{\xlst@dgt{7}}}1 {8}{{\xlst@dgt{8}}}1 {9}{{\xlst@dgt{9}}}1
+  {.0}{{\xlst@dgt{.0}}}2
+  {.1}{{\xlst@dgt{.1}}}2 {.2}{{\xlst@dgt{.2}}}2 {.3}{{\xlst@dgt{.3}}}2
+  {.4}{{\xlst@dgt{.4}}}2 {.5}{{\xlst@dgt{.5}}}2 {.6}{{\xlst@dgt{.6}}}2
+  {.7}{{\xlst@dgt{.7}}}2 {.8}{{\xlst@dgt{.8}}}2 {.9}{{\xlst@dgt{.9}}}2
+  {:lmath:}{{\textcolor{xlst@colors@lst@numbers}{\textbackslash(}}}2 {:rmath:}{{\textcolor{xlst@colors@lst@numbers}{\textbackslash)}}}2 {:ldmath:}{{\textcolor{xlst@colors@lst@numbers}{\textbackslash[}}}2 {:rdmath:}{{\textcolor{xlst@colors@lst@numbers}{\textbackslash]}}}2 {:ul:}{{\_}}1}
+\if@xlst@extendednums\xlst@lst@extendedliterates\fi
+}
+
+% The digit separator and the radix prefixes have to be registered after the
+% plain digits, otherwise the single digit wins the (longer) match.
+\def\xlst@lst@extendedliterates{%
+\lstset{add to literate={_0}{{\xlst@dgt{\textunderscore0}}}2 {_1}{{\xlst@dgt{\textunderscore1}}}2 {_2}{{\xlst@dgt{\textunderscore2}}}2 {_3}{{\xlst@dgt{\textunderscore3}}}2
+{_4}{{\xlst@dgt{\textunderscore4}}}2 {_5}{{\xlst@dgt{\textunderscore5}}}2 {_6}{{\xlst@dgt{\textunderscore6}}}2
+{_7}{{\xlst@dgt{\textunderscore7}}}2 {_8}{{\xlst@dgt{\textunderscore8}}}2 {_9}{{\xlst@dgt{\textunderscore9}}}2
+{0x}{{\xlst@pfx\xlst@lst@hex{0x}}}2 {0X}{{\xlst@pfx\xlst@lst@hex{0X}}}2
+{0b}{{\xlst@pfx\@empty{0b}}}2 {0B}{{\xlst@pfx\@empty{0B}}}2
+{0o}{{\xlst@pfx\@empty{0o}}}2 {0O}{{\xlst@pfx\@empty{0O}}}2
+}}
+
+\def\xlst@lst@numletter{\futurelet\xlst@lst@nexttok\xlst@lst@numletter@}
+\def\xlst@lst@numletter@{%
+  \ifxlst@lst@inhex@\xlst@lst@scan\xlst@lst@hexletters
+  \else\xlst@lst@scan\xlst@lst@numsuffixes\fi
+  \ifxlst@lst@match@\expandafter\xlst@lst@numletter@@\else\expandafter\xlst@lst@plainletter\fi}
+\def\xlst@lst@numletter@@#1{%
+  \lst@XPrintToken\let\lst@scanmode\lst@scan@m
+  \lst@token{{\xlst@dgt{#1}}}\lst@length\@ne
+  \lst@XPrintToken}
+\newif\ifxlst@lst@match@
+\def\xlst@lst@scan#1{\xlst@lst@match@false\expandafter\xlst@lst@scan@#1\@nil}
+\def\xlst@lst@scan@#1{%
+  \ifx#1\@nil\let\xlst@lst@next\relax
+  \else\ifx#1\xlst@lst@nexttok
+    \xlst@lst@match@true\let\xlst@lst@next\xlst@lst@scan@@
+  \else\let\xlst@lst@next\xlst@lst@scan@\fi\fi\xlst@lst@next}
+\def\xlst@lst@scan@@#1\@nil{}
+% the characters of a listing are of category code 12, the lists have to match
+\begingroup
+\lccode`\0=`\a \lccode`\1=`\b \lccode`\2=`\c \lccode`\3=`\d \lccode`\4=`\e
+\lccode`\5=`\f \lccode`\6=`\A \lccode`\7=`\B \lccode`\8=`\C \lccode`\9=`\D
+\lccode`\!=`\E \lccode`\?=`\F
+\lowercase{\endgroup\gdef\xlst@lst@hexletters{0123456789!?}}% a-f, A-F
+\lst@Key{number suffixes}{eE}{\edef\xlst@lst@numsuffixes{\detokenize{#1}}}
+\if@xlst@extendednums\else\let\xlst@lst@numletter\xlst@lst@plainletter\fi
+
+\xlstSetLiterateTable
+% Basic and internal highlighting definitions
+% please note, that they will apply under every condition!
+\newif\if@lst@within@inline@
+% Inline code opens with a \thinspace to separate it from preceding text. At the
+% start of a paragraph there is no such text, so the space is dropped there.
+% \xlst@inline@lead@prepare decides this outside of any box drawn around the code.
+\def\xlst@inline@lead{\thinspace}
+\def\xlst@inline@lead@prepare{%
+  \ifvmode\leavevmode\let\xlst@inline@lead\relax
+  \else\ifnum\lastnodetype<\z@\let\xlst@inline@lead\relax\fi\fi}
+% A wrapper such as \href puts a whatsit before the space, which then survives a
+% line break. \xlstInlineLead{<material>} emits the space before the wrapper,
+% where a line break discards it, and suppresses it for the inline code inside.
+\newcommand\xlstInlineLead[1]{{\xlst@inline@lead@prepare\xlst@inline@lead
+  \let\xlst@inline@lead\relax\let\xlst@inline@lead@prepare\relax#1}}
+% #1 keys, #2 code; appends the keys of \xlstInlineKeys
+\def\xlst@inline@lstinline#1#2{\expandafter\xlst@inline@lstinline@\expandafter{\xlst@inline@keys}{#1}{#2}}
+% the delimiter of \lstinline is the first of these characters that the code
+% does not contain, so a backtick (R's `names<-`) does not end the code early
+\def\xlst@inline@lstinline@#1#2#3{\edef\xlst@inline@src{\detokenize{#3}}%
+  \xlst@inline@delim`|!"\@nil%
+  \begingroup\edef\x{\endgroup\noexpand\lstinline[\unexpanded{#2,#1}]%
+    \xlst@inline@d\unexpanded{#3}\xlst@inline@d}\x}
+\def\xlst@inline@delim#1{\ifx\@nil#1\let\xlst@inline@d\xlst@inline@d@last\else
+  \edef\xlst@inline@d{\string#1}\edef\xlst@inline@tmp{\noexpand\in@{\xlst@inline@d}{\xlst@inline@src}}%
+  \xlst@inline@tmp\ifin@\expandafter\expandafter\expandafter\xlst@inline@delim
+  \else\expandafter\expandafter\expandafter\xlst@inline@delim@stop\fi\fi}
+\def\xlst@inline@delim@stop#1\@nil{}
+\edef\xlst@inline@d@last{\string`}
+\newcommand*\xlst@dlst@default[2][]{%
+\begingroup\xlst@inline@lead@prepare\fboxsep=\z@\fcolorbox{xlst@colors@border}{xlst@colors@background}{%
+  \if@xlst@inlinesize\@lst@within@inline@true\fi\xlst@inline@lead\strut\xlst@inline@lstinline{prebreak=\xlst@lst@inline@prebreak,#1,keepspaces=true,breakatwhitespace}{#2}\thinspace
+}\endgroup}
+
+\newcommand*\xlst@dlst@blank[2][]{%
+\begingroup\xlst@inline@lead@prepare\xlst@inline@lead\if@xlst@inlinesize\@lst@within@inline@true\fi\xlst@inline@lstinline{prebreak=\xlst@lst@inline@prebreak,#1,keepspaces=true,breakatwhitespace}{#2}\endgroup}
+
+\newcommand*\xlst@dlst@input[2][]{\begingroup\if@xlst@inlinesize\@lst@within@inline@true\fi\lstinputlisting[#1]{#2}\endgroup}
+
+% the defaults come second to overwrite the "ultimate"/global defaults passed in ##1 :D
+\def\xlstSetInputDefaults#1{\renewcommand*\xlst@dlst@input[2][]{\begingroup\if@xlst@inlinesize\@lst@within@inline@true\fi\lstinputlisting[##1,#1]{##2}\endgroup}}
+
+\def\xlstRemoveInputBackground{\xlstSetInputDefaults{frame=none,%
+rulecolor={},backgroundcolor={}}}
+
+% Lst styles that will be shipped in each case
+\lstdefinestyle{xlst@nonum}{xleftmargin=3\p@,xrightmargin=3\p@,%will fix some overhead :D
+numbers=none,numbersep=\z@}
+
+% Basic - we-work-in-the-back-hey-bud-environments
+\lstnewenvironment{lstplain}[1][]
+  {\lstset{xleftmargin=\z@,xrightmargin=\z@,%
+  numbers=none,numbersep=\z@,frame=none,rulecolor={},backgroundcolor={},#1}}{}
+
+\lstnewenvironment{lstnonum}[1][]{\lstset{style=xlst@nonum,#1}}{}
+
+% Here we will handle the language-control - right now, tcb will not be used
+% for cleaner setup, we will use pgfkeys
+\gdef\xlstset#1{\pgfkeys{/xlst@lst@family/.cd,#1}}
+
+% Here we define globals, which are basically applied to every listing - like for example the initial style
+\pgfkeys{/xlst@lst@family/globals/.cd,listing style/.initial={xlst@MAIN}}
+
+% Just to provide a clearer structure the keys will be defined seperate for all different styles.
+\pgfkeys{/xlst@lst@family/default/.cd,
+listing style/.initial = {\pgfkeysvalueof{/xlst@lst@family/globals/listing style}},
+command name prefix/.initial={},command name suffix/.initial={},%
+constructor command/.initial={xlst@NewLstEnvCore},
+/xlst@lst@family/nonumber/.cd,
+listing style/.initial = {\pgfkeysvalueof{/xlst@lst@family/globals/listing style}},
+command name prefix/.initial={},command name suffix/.initial={*},%
+constructor command/.initial={xlst@NewLstEnvCoreStarred},
+/xlst@lst@family/plain/.cd,
+listing style/.initial = {\pgfkeysvalueof{/xlst@lst@family/globals/listing style},xleftmargin=\z@,xrightmargin=\z@,numbers=none,numbersep=\z@,frame=none,%
+rulecolor={},backgroundcolor={}},
+command name prefix/.initial={plain},command name suffix/.initial={},%
+constructor command/.initial={xlst@NewLstEnvPlain},
+/xlst@lst@family/plain number/.cd,
+listing style/.initial = {\pgfkeysvalueof{/xlst@lst@family/globals/listing style},%
+xrightmargin=\z@,xleftmargin=\dimexpr\xlst@length@lst@xleftmargin-3\p@,frame=none,rulecolor={},backgroundcolor={}},
+command name prefix/.initial={plain},command name suffix/.initial={},%
+constructor command/.initial={xlst@NewLstEnvPlain}}
+
+% the style is only used as a key into the families above, so check it
+\def\xlstsetstyle#1{%
+\pgfkeysifdefined{/xlst@lst@family/#1/listing style}{\def\xlst@style@default{#1}}{%
+  \PackageError{xlistings}{Unknown style '#1'}%
+    {Choose one of 'default', 'nonumber', 'plain', or 'plain number'.}}}
+\xlstsetstyle{\@xlst@style}
+
+% Inlines
+\pgfkeys{/xlst@lst@family/inline default/.cd,
+listing style/.initial = {\pgfkeysvalueof{/xlst@lst@family/globals/listing style}},
+command name prefix/.initial={c},command name suffix/.initial={},
+draw command/.initial={xlst@dlst@default}}
+\pgfkeys{/xlst@lst@family/inline blank/.cd,
+listing style/.initial = {\pgfkeysvalueof{/xlst@lst@family/globals/listing style}},
+command name prefix/.initial={b},command name suffix/.initial={},
+draw command/.initial={xlst@dlst@blank}}
+\pgfkeys{/xlst@lst@family/inline input/.cd,
+listing style/.initial = {\pgfkeysvalueof{/xlst@lst@family/globals/listing style}},
+command name prefix/.initial={i},command name suffix/.initial={},
+draw command/.initial={xlst@dlst@input}}
+
+% for names that cannot be part of a command name (\bx86 reads as \bx and '86')
+% #1 keys, #2 language, #3 code
+\newcommand*\xlstc[3][]{\xlst@inline@call{default}{#2}{#1}{#3}}
+\newcommand*\xlstb[3][]{\xlst@inline@call{blank}{#2}{#1}{#3}}
+\newcommand*\xlsti[3][]{\xlst@inline@call{input}{#2}{#1}{#3}}
+% #1 inline variant, #2 language, #3 keys, #4 code
+\def\xlst@inline@call#1#2#3#4{%
+\protected@edef\xlst@inline@name{%
+  \pgfkeysvalueof{/xlst@lst@family/inline #1/command name prefix}#2%
+  \pgfkeysvalueof{/xlst@lst@family/inline #1/command name suffix}}%
+\expandafter\ifx\csname\xlst@inline@name\endcsname\relax
+  \PackageError{xlistings}{The language '#2' is not loaded}%
+    {Load it with \string\LoadLanguages{#2} before you use it.}%
+\else\csname\xlst@inline@name\endcsname[#3]{#4}\fi}
+
+% Language-Registration-Helper
+% spacing control
+\def\xlst@ensure#1{\needspace{#1\baselineskip}}
+\def\xlstguard#1{\gdef\@xlst@guard@default{#1}}
+\xlstguard{.8}
+\def\xlst@guardspace{\if@xlst@guardspace\xlst@ensure{\@xlst@guard@default}\fi}
+% on line:
+\lst@AddToHook{PreInit}{\if@lst@within@inline@\else\xlst@font@fs@normal\fi}
+
+% we want to allow to overwrite existing envs
+\def\lst@allow@redefinition#1{%
+\ifcsname #1\endcsname
+  \PackageWarning{xlistings}{Environment '#1' already defined, overwriting it!}%
+  \expandafter\let\csname#1\endcsname\relax
+  \expandafter\let\csname end#1\endcsname\relax
+\fi
+}
+
+% #1 Name #2 Key #3 In Extra #4 Out Extra #5 Language
+\def\xlst@NewLstEnvCore#1#2#3#4#5{%
+\lstnewenvironment{#1}[1][]{#3\lstset{##1}\xlst@guardspace}{#4}%
+}
+
+% #1 Name #2 Key #3 In Extra #4 Out Extra #5 Language
+\def\xlst@NewLstEnvCoreStarred#1#2#3#4#5{%
+\lstnewenvironment{#1}[1][]{#3\lstset{style=xlst@nonum,##1}\xlst@guardspace}{#4}%
+}
+
+% #1 Name #2 Key #3 In Extra #4 Out Extra #5 Language
+\def\xlst@NewLstEnvPlain#1#2#3#4#5{%
+\lstnewenvironment{#1}[1][]{#3\lstset{##1}\xlst@guardspace}{#4}%
+}
+
+% #1 KeyName, #2 LanguageName, #3 EnvironName, #4 OverrideKey
+\def\xlst@@NewLstEnv#1#2#3#4{%
+\begingroup
+\lst@allow@redefinition{#3}%
+\lst@allow@redefinition{#3@}% lstlistings wrap
+\protected@edef\xlst@xcurlst{\expandafter\noexpand\csname\pgfkeysvalueof{/xlst@lst@family/\environName/constructor command}\endcsname{#3}{#1}{\noexpand\lstset{style=\pgfkeysvalueof{/xlst@lst@family/\environName/listing style},language=#2,language addons=#4}}{}{#2}}%
+\global\xlst@xcurlst\endgroup
+}
+
+% The colossos: core registration handler
+% #1 list of aliases
+% #2: Name of the Language [java,latex]
+% #3: Name of the corresponding lst-Language [java, latex,...]
+\newcommand*\RegisterLanguage[3][]{\begingroup\makeatletter
+\if@xlst@fakeminted
+\expandafter\gdef\csname xlst@@minted@#2\endcsname{#3}%
+\protected@edef\@tmp{#1}\ifx\@tmp\@empty\else
+\@for\@alias:=\@tmp\do{\expandafter\gdef\csname xlst@@minted@\@alias\endcsname{#3}}%
+\fi\fi
+% Register the Environments
+\def\xlst@foreach@basic@env@iter##1,##2\@nil{%
+\ifx!##1!\else
+\def\environName{##1}%
+\protected@edef\environCurName{\pgfkeysvalueof{/xlst@lst@family/\environName/command name prefix}#2\pgfkeysvalueof{/xlst@lst@family/\environName/command name suffix}}% assign
+\xlst@debug{> #2/#3 e '##1' (name: \environCurName, ctor: \pgfkeysvalueof{/xlst@lst@family/\environName/constructor command})}%
+\protected@edef\xlst@CreateAnLstEnviron{\noexpand\xlst@@NewLstEnv{\environName}{#3}{\environCurName}{#2}}% fully expand the Name, otherwise it would be undefined when the environment gets used
+\xlst@CreateAnLstEnviron
+\ifx!##2!\else\xlst@foreach@basic@env@iter##2,\@nil\fi
+\fi}
+
+\def\xlst@foreach@basic@env##1{\xlst@foreach@basic@env@iter##1,\@nil}
+\xlst@foreach@basic@env{default,nonumber,plain}%,presentation}
+
+% This procedure can be used in persistence to iterate over the pgf-keys
+% Register 'inline default'
+\def\xlst@foreach@inline@env@iter##1,##2\@nil{%
+\ifx!##1!\else
+\def\inlineName{##1}%
+\protected@edef\inlineCurName{\pgfkeysvalueof{/xlst@lst@family/inline \inlineName/command name prefix}#2\pgfkeysvalueof{/xlst@lst@family/inline \inlineName/command name suffix}}% assign
+\xlst@debug{> #2/#3 i '\inlineName' (cmd: \inlineCurName, sty: \pgfkeysvalueof{/xlst@lst@family/inline \inlineName/listing style}, d: \pgfkeysvalueof{/xlst@lst@family/inline \inlineName/draw command})}%
+% We will construct those with optional arguments, to give the user a chance to pass optional Arguments :D
+% luckily we can construct the main Argument without any expansion problems :D
+\expandafter\xdef\csname\inlineCurName\endcsname{\noexpand\protect\noexpand\@ifnextchar[{\noexpand\protect\expandafter\noexpand\csname @@hasopt@@\inlineCurName\endcsname}{\noexpand\protect\expandafter\noexpand\csname @@noopt@@\inlineCurName\endcsname}}%
+% Variant without optionals :D
+\expandafter\xdef\csname @@noopt@@\inlineCurName\endcsname####1{\noexpand\protect\expandafter\noexpand\csname\pgfkeysvalueof{/xlst@lst@family/inline \inlineName/draw command}\endcsname[style=\pgfkeysvalueof{/xlst@lst@family/inline \inlineName/listing style},language=#3,language addons=#2]{####1}}%
+\expandafter\xdef\csname @@hasopt@@\inlineCurName\endcsname[####1]####2{\noexpand\protect\expandafter\noexpand\csname\pgfkeysvalueof{/xlst@lst@family/inline \inlineName/draw command}\endcsname[style=\pgfkeysvalueof{/xlst@lst@family/inline \inlineName/listing style},language=#3,language addons=#2,####1]{####2}}%
+\expandafter\robustify\csname\inlineCurName\endcsname% robustify
+\ifx!##2!\else\xlst@foreach@inline@env@iter##2,\@nil\fi
+\fi}%
+\def\xlst@foreach@inline@env##1{\xlst@foreach@inline@env@iter##1,\@nil}
+\xlst@foreach@inline@env{default,blank,input}%,present}
+% END: Register Language as present, by definig a command
+\endgroup}
+
+% The [hopefully] beautiful 'sopra-style'
+\lstdefinestyle{xlst@MAIN}{%
+% background and border, the frame
+frame           = single,
+framerule       = \xlst@length@lst@famerule,
+lineskip        = \z@,
+rulecolor       = \@declaredcolor{xlst@colors@border},
+backgroundcolor = \@declaredcolor{xlst@colors@background},
+xleftmargin     = \xlst@length@lst@xleftmargin,
+xrightmargin    = \xlst@length@lst@xrightmargin,
+aboveskip       = \medskipamount,
+belowskip       = \medskipamount,
+% the 'key'-styles:
+stringstyle     = \xlst@styles@lst@basic\xlst@styles@lst@literals,
+commentstyle    = \xlst@styles@lst@basic\xlst@styles@lst@comments,
+keywordstyle    = \xlst@styles@lst@basic\xlst@styles@lst@keywordA,
+keywordstyle    = [2]{\xlst@styles@lst@basic\xlst@styles@lst@keywordB},
+keywordstyle    = [3]{\xlst@styles@lst@basic\xlst@styles@lst@keywordC},
+keywordstyle    = [4]{\xlst@styles@lst@basic\xlst@styles@lst@keywordD},
+keywordstyle    = [5]{\xlst@styles@lst@basic\xlst@styles@lst@literals},
+keywordstyle    = [6]{\xlst@styles@lst@basic\xlst@styles@lst@command},
+basicstyle      = \xlst@styles@lst@basic,
+% fixed columns would stretch narrow fonts and break math in a literate
+columns         = flexible,
+showstringspaces=false,
+% line numbers:
+numbers         = left, 
+numbersep       = \xlst@length@lst@numsep,
+numberstyle     = \xlst@styles@lst@basic\xlst@styles@lst@linenumbers\xlst@lst@num@consume,
+% line break:
+breaklines      = true, 
+extendedchars   = true,
+prebreak        = \xlst@lst@prebreak,
+% escapes:
+escapeinside    = {!*}{*!},
+% space control
+keepspaces      = false}
+
+% Always present 'void'-Language
+\lstdefinelanguage{void}{moredelim=[is][{}]{|plain|}{|plain|},moredelim=[is][\xlstGet{highlight}]{|ihl|}{|ihl|}}
+\RegisterLanguage{void}{void}
+
+% Now we will define some languages
+\def\xlstLanguageSearchPath{{langs/}}
+% a language will be loaded by the default latex-file mechanis
+% the file has to have the signature 'xlistings-<Name>.cfg'; the prefix keeps
+% the shipped definitions out of the flat TDS namespace (a bare 'python.cfg'
+% would be visible to every document on the system). The unprefixed
+% '<Name>.cfg' is still honoured as a fallback so private language definitions
+% keep working.
+\def\xlstLanguageFilePrefix{xlistings-}
+
+\newif\if@xlst@lang@found@
+\def\xlst@LoadLanguage@try#1{% #1: file name without the '.cfg' extension
+\if@xlst@lang@found@\else
+  \InputIfFileExists{#1.cfg}{%
+    \@xlst@lang@found@true
+    \xlst@debug{Loaded '\xlst@curlanginputfile' from '#1.cfg'}%
+  }{}%
+\fi}
+\def\xlst@LoadLanguage@searchPath@iter#1,#2\@nil{%
+\ifx!#1!\else
+\xlst@LoadLanguage@try{#1\xlstLanguageFilePrefix\xlst@curlanginputfile}%
+\xlst@LoadLanguage@try{#1\xlst@curlanginputfile}%
+\ifx!#2!\else\xlst@LoadLanguage@searchPath@iter#2,\@nil\fi\fi
+}
+\def\xlst@LoadLanguage@searchPath%
+{% the local directory always wins
+\xlst@LoadLanguage@try{\xlstLanguageFilePrefix\xlst@curlanginputfile}%
+\xlst@LoadLanguage@try{\xlst@curlanginputfile}%
+\expandafter\xlst@LoadLanguage@searchPath@iter\xlstLanguageSearchPath,\@nil}
+
+% a language is loaded at most once, so languages may require each other
+\def\xlst@LoadLanguage@single#1\@nil{%
+\ifcsname xlst@lang@loaded@#1\endcsname
+  \xlst@debug{Language '#1' is already loaded}%
+\else
+  \csgdef{xlst@lang@loaded@#1}{}%
+  \def\xlst@curlanginputfile{#1}%
+  \@xlst@lang@found@false
+  \xlst@LoadLanguage@searchPath{}%
+  \if@xlst@lang@found@\else
+    \PackageWarning{xlistings}{No definition found for the language '#1',
+      neither '\xlstLanguageFilePrefix#1.cfg' nor '#1.cfg' in the current
+      directory or in the search path}%
+  \fi
+\fi}
+\def\xlst@LoadLanguage@iter#1,#2\@nil{%
+\ifx!#1!\else\xlst@LoadLanguage@single#1\@nil
+  \ifx!#2!\else\xlst@LoadLanguage@iter#2,\@nil
+\fi\fi
+}
+\def\xlst@LoadLanguage#1{%
+\protected@edef\xlst@@langlist{\zap@space#1 \@empty}%
+\expandafter\xlst@LoadLanguage@iter\xlst@@langlist,\@nil}
+\let\LoadLanguage\xlst@LoadLanguage
+\let\LoadLanguages\LoadLanguage
+
+% Change colors
+\let\xlst@registered@colors@keywordA\@empty  \let\xlst@registered@colors@keywordB\@empty
+\let\xlst@registered@colors@keywordC\@empty  \let\xlst@registered@colors@numbers\@empty
+\let\xlst@registered@colors@literals\@empty  \let\xlst@registered@colors@comments\@empty
+\let\xlst@registered@colors@highlight\@empty \let\xlst@registered@colors@command\@empty
+\let\xlst@registered@colors@linenumbers\@empty \let\xlst@registered@colors@numprefix\@empty
+
+% #1 color name #2 color
+\newcommand*\lstcolorlet[2]{%
+\@ifundefined{xlst@registered@colors@#1}{%
+\PackageError{xlistings}{The color '#1' is undefined.}%
+{Choose one of 'keywordA,keywordB,keywordC,numbers,numprefix,literals,comments,highlight,command,linenumbers'}%
+}{\colorlet{xlst@colors@lst@#1}{#2}}%
+}
+
+% #1 color mode #2 color name #3 color
+\newcommand*\lstcolordef[3][RGB]{%
+\@ifundefined{xlst@registered@colors@#2}{%
+\PackageError{xlistings}{The color '#2' is undefined.}%
+{Choose one of 'keywordA,keywordB,keywordC,numbers,numprefix,literals,comments,highlight,command,linenumbers'}%
+}{\definecolor{xlst@colors@lst@#2}{#1}{#3}}%
+}
+
+% Highlights support
+% (declared outside of the conditional: a skipped branch still counts \if...\fi)
+\newif\ifxlst@hl@open
+\newif\ifxlst@hl@reopen
+\newbox\xlst@hl@box
+
+% The default marker: a faint tint behind the segment and an underline, which
+% needs no tikz. #1 is the color.
+\newenvironment{xlst@listings@underline@env}[1][]
+{\begingroup\def\xlst@hl@col{#1}\begin{lrbox}{\xlst@hl@box}}
+{\end{lrbox}%
+ \rlap{\color{\xlst@hl@col!14}\rule[-\dp\strutbox]{\wd\xlst@hl@box}{\dimexpr\ht\strutbox+\dp\strutbox\relax}}%
+ \rlap{\color{\xlst@hl@col!85}\rule[-\dp\strutbox]{\wd\xlst@hl@box}{.7\p@}}%
+ \box\xlst@hl@box\endgroup}
+
+\if@xlst@highlights
+\newenvironment{xlst@listings@highlight@env}[1][]
+{\begingroup\tikzset{xlst@listings@highlight/.style={#1}}\begin{lrbox}{\@tempboxa}}
+{\end{lrbox}\xlst@highlights@box[xlst@listings@highlight]{\@tempboxa}\endgroup}
+
+\newcommand*\xlst@highlights@box[2][]{%
+  \hspace*{-\p@}\tikz[#1]{%
+  \pgfpathrectangle{\pgfpoint\p@\z@}{\pgfpoint{\wd #2}{\ht #2}}%
+  \pgfusepath{use as bounding box}%
+  \node[anchor=base west,outer sep=\z@,inner xsep=\z@,outer xsep=\p@,inner ysep=\z@,rounded corners=1.65\p@,minimum height=\ht\strutbox+\p@,#1]{\hspace*\p@\strut\box#2\hspace*{-.5\p@}};
+  }\hspace*{\p@}%
+}
+\def\xlsthlboxd#1{\protected@edef\@tmp{\noexpand\@xlstLstHLwith{xlst@listings@highlight@env}{#1}}\@tmp}
+\else % without tikz the custom boxes are plain colored
+\def\xlsthlboxd#1{\xlst@style@get{highlight}}
+\fi
+
+% A box cannot hold a line break, but a highlight may span several lines. So the
+% box is closed at the end of every line and opened again with the first output
+% of the next one. Closing the group of the box runs \xlst@highlights@endenv,
+% which normally also closes the group of the listings mode (the final \egroup);
+% at the end of a line that group has to stay open, as the highlight continues.
+\def\xlst@hl@endenv@full{\expandafter\end\expandafter{\xlst@hl@env}\global\xlst@hl@openfalse\egroup}
+\def\xlst@hl@endenv@eol{\expandafter\end\expandafter{\xlst@hl@env}}
+\let\xlst@highlights@endenv\xlst@hl@endenv@full
+\def\xlst@hl@flushlostspace{\begingroup\let\lst@currstyle\relax\lst@OutputLostSpace\endgroup}
+% #1 environment, #2 its optional argument
+\def\@xlstLstHLwith#1#2{\gdef\xlst@hl@env{#1}\gdef\xlst@hl@opts{#2}\global\xlst@hl@reopentrue}
+% the pending line break must be emitted before the box is opened, else it is lost
+\def\xlst@hl@begin#1#2{\lst@TrackNewLines\xlst@hl@flushlostspace
+  \global\let\xlst@highlights@endenv\xlst@hl@endenv@full\global\xlst@hl@opentrue
+  \begin{#1}[#2]\bgroup\aftergroup\xlst@highlights@endenv}
+\lst@AddToHook{EOL}{\ifxlst@hl@open
+  \global\xlst@hl@reopentrue\global\xlst@hl@openfalse
+  \global\let\xlst@highlights@endenv\xlst@hl@endenv@eol\egroup\fi}
+\def\xlst@hl@reopen{\ifxlst@hl@reopen\global\xlst@hl@reopenfalse
+  \expandafter\expandafter\expandafter\xlst@hl@begin\expandafter\expandafter\expandafter{\expandafter\xlst@hl@env\expandafter}\expandafter{\xlst@hl@opts}\fi}
+\lst@AddToHook{Output}{\xlst@hl@reopen}
+\lst@AddToHook{OutputOther}{\xlst@hl@reopen}
+\def\lst@EnterMode#1#2{\xlst@hl@reopen
+  \bgroup \lst@mode=#1\relax
+  \lst@lAddTo\lst@entermodes{\lst@EnterMode{#1}{#2}}%
+  #2\lst@FontAdjust}
+\lst@AddToHook{EndGroup}{\global\xlst@hl@reopenfalse}
+\lst@AddToHook{InitVars}{\global\xlst@hl@openfalse\global\xlst@hl@reopenfalse}
+
+\def\xlsthlbox#1{\@xlstLstHLwith{xlst@listings@underline@env}{#1}}
+% the markers share lightness and saturation with the palette above
+\definecolor{xlstwarning}{RGB}{206,135,27}
+\definecolor{xlsterror}{RGB}{193,49,60}
+\definecolor{xlstinfo}{RGB}{34,116,175}
+\def\xlstcustom{fill=purple!14,draw=purple!60,line width=.4\p@,rounded corners=1\p@}
+\def\xlsthlwarning{\xlsthlbox{xlstwarning}}
+\def\xlsthlerror{\xlsthlbox{xlsterror}}
+\def\xlsthlinfo{\xlsthlbox{xlstinfo}}
+% only pmode
+% Comfort guards
+\def\xlstIfPmode#1#2{\ifnum\lst@mode=\lst@Pmode\relax#1\else#2\fi}
+% Hook discretionary
+\colorlet{xlst@breakcolor}{xlst@colors@lst@linenumbers}
+\preto\lst@@discretionary{\@declaredcolor{xlst@breakcolor}}
+\appto\lst@@discretionary{\normalcolor}
+
+\newif\if@xlistings@mintedlangbadge
+\let\xlstmintedwithlangbadge\@xlistings@mintedlangbadgetrue
+\let\xlstmintedwithoutlangbadge\@xlistings@mintedlangbadgefalse
+
+% the language badges do not depend on the minted emulation
+\def\xlstlangbadgestyle#1{\raisebox{2.5pt}{\normalfont\color{xlst@colors@lst@linenumbers}\textsf{\footnotesize#1}}}
+\if@xlst@accuspp@available@
+\def\xlst@typesetlang#1{\BeginAccSupp{method=escape,ActualText={}}\xlstlangbadgestyle{#1}\EndAccSupp{}}
+\else
+\def\xlst@typesetlang#1{\xlstlangbadgestyle{#1}}
+\fi
+\newif\ifxlst@badge@pending
+% a badge is shown on the first line of the next listing; asking for several
+% before that listing only keeps the last one, and the hook removes itself
+\def\xlst@shownextcodelang#1{%
+\protected@xdef\xlst@currcodelang{#1}%
+\ifxlst@badge@pending\else
+  \global\xlst@badge@pendingtrue
+  \global\let\xlst@holdEveryPar\lsthk@EveryPar
+  \gappto\lsthk@EveryPar{\rlap{\smash{\hspace*{\linewidth}\llap{\xlst@typesetlang{\xlst@currcodelang}}}}%
+    \global\let\lsthk@EveryPar\xlst@holdEveryPar\global\xlst@badge@pendingfalse}%
+\fi}
+\NewCommandCopy\BadgeNextListing\xlst@shownextcodelang
+
+\if@xlst@fakeminted
+% #1 style, #2 lst-language, #3 name of the language, #4 further keys
+\def\xlst@minted@setup#1#2#3#4{\lstset{style=#1,language=#2,language addons=#3,#4}}
+% allows to map languages
+
+\def\xlst@minted@language@mapping#1{\@ifundefined{xlst@@minted@#1}{#1}{\csname xlst@@minted@#1\endcsname}}
+\def\xlst@minted@ensure#1{%
+\@ifundefined{xlst@@minted@#1}{%
+  \xlst@debug{Loading '#1' for the minted environment}%
+  % the environment already runs under the catcodes of a listing
+  \begingroup\catcode`\^^M=5\relax\endlinechar=13\relax\catcode`\ =10\relax
+  \makeatletter\xlst@LoadLanguage{#1}\endgroup
+  \@ifundefined{xlst@@minted@#1}{%
+    \PackageError{xlistings}{The language '#1' is not available}%
+      {Load it with \string\LoadLanguages{#1} or map an existing one onto it
+       with \string\xlstmintedmap.}%
+  }{}%
+}{}}
+\def\xlstmintedmap#1#2{\expandafter\def\csname xlst@@minted@#1\endcsname{#2}}
+
+% TODO: auto load a language if a requested one is not loaded
+\def\xlstsetmintedstyle#1{\def\xlst@minted@style{#1}}
+\xlstsetmintedstyle{\xlst@style@default}
+
+\lstnewenvironment{minted}[2][]{\xlst@minted@ensure{#2}\protected@edef\@tmp{\pgfkeysvalueof{/xlst@lst@family/\xlst@minted@style/listing style}}\protected@edef\@temp{\xlst@minted@language@mapping{#2}}\expandafter\expandafter\expandafter\xlst@minted@setup\expandafter\expandafter\expandafter{\expandafter\@tmp\expandafter}\expandafter{\@temp}{#2}{#1}%
+\if@xlistings@mintedlangbadge\xlst@shownextcodelang{#2}\fi
+}{}
+\fi
+
+\endinput

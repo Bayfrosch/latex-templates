@@ -1,0 +1,646 @@
+\errorcontextlines=99999
+\documentclass[a4paper,10pt,parskip=half,numbers=noenddot]{scrartcl}
+
+\usepackage[T1]{fontenc}
+\usepackage[a4paper,top=2.2cm,bottom=2.4cm,left=2.4cm,right=2.4cm,includefoot]{geometry}
+\usepackage{newpxtext}
+\usepackage[varqu,varl,scaled=.96]{inconsolata}
+
+\usepackage[style={plain number},extendednums,highlights]{xlistings}
+\LoadLanguages{latex,java,bash,lambda_calculus,R,tac,mips}% the others are loaded by the minted environment on demand
+
+\usepackage{booktabs}
+\usepackage{enumitem}
+\setlist[itemize]{nosep}
+\usepackage{microtype}
+\usepackage[noautomatic]{imakeidx}
+\makeindex[title={Index of commands and options},columns=2,columnsep=.75cm,intoc,noautomatic]
+\indexsetup{noclearpage}
+\definecolor{accent}{RGB}{160,40,90}% the keyword color of xlistings, a bit darker
+\usepackage[colorlinks=true,breaklinks=true,allcolors=accent]{hyperref}
+\usepackage[capitalise]{cleveref}
+% every command and option is a target, and each occurrence in a listing links to it
+\usepackage[underline,underline-text=false,underline-color=black!12]{code-link}
+\CodeLinkStyle{cmd}{\xlstGetStyle{command}}
+\CodeLinkGroup{cmd}{prefix=cmd:,style=cmd,language=lLatex}
+\CodeLinkGroup{opt}{prefix=opt:,language=lLatex}
+% literates are replaced in listings, so they only link from the text (no listing uses this language)
+\CodeLinkGroup{lit}{prefix=lit:,language=xlstdoclit}
+% the minted environment is defined by xlistings: it links to fakeminted
+\CodeLinkRegister[group=opt,label=opt:fakeminted]{minted}
+% variants without an entry of their own link to their sibling
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstc]{xlstb}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstc]{xlsti}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstGetStyle]{xlstGet}
+% the placeholders \c<lang>, \b<lang>, \i<lang> of the inline commands
+\CodeLinkRegister[group=cmd,command,label=use:inline]{c}
+\CodeLinkRegister[group=cmd,command,label=use:inline]{b}
+\CodeLinkRegister[group=cmd,command,label=use:input]{i}
+\CodeLinkRegister[group=cmd,command,label=cmd:LoadLanguages]{LoadLanguage}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstLanguageSearchPath]{xlstLanguageFilePrefix}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstDefineStyles]{xlstSetStyle}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstGetStyle]{xlstStyles}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstSetLeftMargin]{xlstSetRightMargin}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstSetLeftMargin]{xlstSetNumSep}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstSetLeftMargin]{xlstSetFrameRule}
+\CodeLinkRegister[group=cmd,command,label=cmd:lstfs]{xlstNumFs}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstPreBreak]{xlstInlinePreBreak}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstSetInputDefaults]{xlstRemoveInputBackground}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstblacklistlinenumbers]{xlstblacklistisghost}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstblacklistlinenumbers]{xlstblacklistispresent}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstdisablenumhl]{xlstenablenumhl}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstmintedwithlangbadge]{xlstmintedwithoutlangbadge}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstmintedwithlangbadge]{BadgeNextListing}
+\CodeLinkRegister[group=cmd,command,label=cmd:xlstmintedwithlangbadge]{xlstlangbadgestyle}
+\newcommand\litref[1]{\CodeLinkRef[group=lit]{#1}}
+% the commands and environments every language gets link to their description in the usage section
+\makeatletter
+\@for\xlstdoc@lang:={aspectj,bash,cpp,csharp,git,haskell,java,javascript,json,lc,latex,lua,markdown,mips,python,R,regex,rubberduck,sirl,sql,tac,ts,xml,yaml}\do{%
+  \edef\xlstdoc@do{%
+    \noexpand\CodeLinkRegister[group=cmd,command,label=use:inline]{c\xlstdoc@lang}%
+    \noexpand\CodeLinkRegister[group=cmd,command,label=use:inline]{b\xlstdoc@lang}%
+    \noexpand\CodeLinkRegister[group=cmd,command,label=use:input]{i\xlstdoc@lang}%
+    \noexpand\CodeLinkRegister[group=opt,label=use:env]{plain\xlstdoc@lang}}%
+  \xlstdoc@do}
+\makeatother
+% a link in a listing keeps the color of its code, the underline marks it
+\makeatletter\lst@AddToHook{Init}{\hypersetup{linkcolor=.}}\makeatother
+\addtokomafont{sectioning}{\color{accent}\rmfamily\bfseries}
+\setkomafont{descriptionlabel}{\bfseries}
+\setcounter{tocdepth}{1}
+\setkomafont{title}{\normalfont\bfseries\huge\color{black}}
+\setkomafont{subtitle}{\normalfont\small}
+\DeclareTOCStyleEntry[beforeskip=1pt,indent=0pt,numwidth=1.4em]{tocline}{section}
+
+\xlstlangoverride{latex}{morekeywords=[5]{\\xlstsetstyle,\\xlstlangoverride,\\LoadLanguages,\\xlstblacklistlinenumbers,\\lstcolorlet,\\xlstDefineStyles,\\xlstlangbadgestyle,\\BadgeNextListing,\\xlstmintedwithlangbadge,\\xlstmintedwithoutlangbadge,\\sisetup,\\xlsthlwarning,\\xlsthlerror,\\xlsthlinfo,\\xlsthlbox,\\xlsthlboxd}}
+
+\let\T\texttt
+\emergencystretch=3em
+\newcommand\enquote[1]{\textquotedblleft#1\textquotedblright}
+\def\argref#1#2{\CodeLinkRef[group=opt]{#1}}
+\def\cmdref#1{\CodeLinkRef[group=cmd,command]{#1}}
+% \c<lang> and friends: listings cannot link a command followed by <
+\newcommand\langcmd[2]{\cmdref{#1}\T{<lang>#2}}
+
+\title{\T{xlistings}}
+\subtitle{\url{https://github.com/EagleoutIce/xlistings}}
+\author{Florian Sihler\thanks{Released under the \href{https://www.latex-project.org/lppl.txt}{LPPL}, version 1.3c or later.}}
+% date and version of the package that typesets this document
+\makeatletter
+\long\def\xlst@parsever#1 v#2 #3\relax{\def\xlstdocdate{#1}\def\xlstdocversion{v#2}}
+\expandafter\expandafter\expandafter\xlst@parsever\csname ver@xlistings.sty\endcsname\relax
+\makeatother
+\date{Version \xlstdocversion{} \textendash{} \xlstdocdate}
+
+% the table of contents needs no heading
+\deftocheading{toc}{}
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+\tableofcontents
+
+
+\section{Introduction}
+
+\noindent\textit{The links in this manual are made with \T{code-link} (see \cref{sec:code-link}).}
+
+This package extends the \href{https://ctan.org/pkg/listings}{listings} package with an easier front-end for code blocks of selected languages, number and segment highlighting, and non-selectable line numbers.\footnote{Whether a number is selectable depends on the viewer; images would be needed to prevent it.} It is not compatible with the \href{https://ctan.org/pkg/minted}{minted} package, but provides a replacement for its interface. Compared to \T{listings}, it adds:
+
+\begin{itemize}[leftmargin=*,itemsep=3.5pt]
+    \item Highlighting of numbers in code: \bjava{10_234 + x1 * 0x34 - x2}\; (\argref{hlnumbers}{hlnumbers} and \argref{extendednums}{extendednums} options)
+    \item Support for the \blatex{\\begin\{minted\}\{<lang>\} :ldots: \\end\{minted\}} environment (\argref{fakeminted}{fakeminted} option)
+    \item Wrapper macros like \blatex{\\bjava\{int i\}} and \clatex{\\cjava\{int i\}} and environments \blatex{\\begin\{plainjava\}}
+    \item Language sensitive override: \blatex{\\xlstlangoverride\{latex\}\{morekeywords=[5]\{\\xlstsetstyle\}\}}
+    \item Support for (\href{https://ctan.org/pkg/accsupp}{accsupp} based) non-selectable line numbers and characters:
+\begin{minted}[xleftmargin=12pt]{java}
+System.out.println("Hello, World!");
+\end{minted}
+    \item Support for blacklisting line numbers with \cmdref{xlstblacklistlinenumbers}
+    \item Highlighting of code segments, also across lines, with delimiters such as \T{|warn|}, \T{|err|}, and \T{|info|}: \bjava{|warn|int x = 0;|warn|}
+    \item Support for umlauts and UTF-8 encoding (with the \href{https://ctan.org/pkg/listingsutf8}{listingsutf8} package)
+    \item Provides \T{autogobble} to remove leading spaces (with the \href{https://ctan.org/pkg/lstaddons}{lstautogobble} package)
+    \item Comfort key \argref{add to literate}{add to literate} to add elements to the literate list
+    \item \blatex{\\LoadLanguages\{<lang>\}} to load a language or multiple languages on demand
+    \item Opinionated language overwrites (see the \T{langs/} folder)
+    \item Opinionated default literates such as \litref{:ldots:}~(\bjava{:ldots:}), \litref{:lan:}~(\bjava{:lan:}), and \litref{:to:}~(\bjava{:to:}), see \cref{sec:literates}
+    \item \blatex{\\BadgeNextListing\{<lang>\}} to show a language tag at the start of the next listing (paragraph). \blatex{\\xlstmintedwithlangbadge} and \blatex{\\xlstmintedwithoutlangbadge} switch it on and off for all \argref{fakeminted}{fakeminted} environments.\footnote{Redefine \cmdref{xlstlangbadgestyle} to restyle the badges; \T{accsupp} keeps them unselectable.}
+\end{itemize}
+
+\xlstmintedwithlangbadge
+
+
+\subsection{Loading the Package}\label{sec:loading-pkg}
+
+Load the package with:
+
+\xlstsetstyle{default}
+\begin{minted}{latex}
+\usepackage{xlistings}
+\end{minted}
+
+This document is typeset with \T{xlistings}.
+To get rid of the bordered look of the code blocks, use \blatex{\\xlstsetstyle\{plain number\}} to switch the look and feel, or the \argref{style}{style} option:
+
+\xlstsetstyle{plain number}
+\begin{minted}{latex}
+\usepackage[style={plain number}]{xlistings}
+\end{minted}
+
+For borderless blocks without line numbers, use \T{plain}:
+
+\xlstsetstyle{plain}
+\begin{minted}[escapeinside=||]{latex}
+\usepackage[style=plain]{xlistings}
+\end{minted}
+
+\subsection{Linking Code with \texorpdfstring{\T{code-link}}{code-link}}\label{sec:code-link}
+
+The separate package \T{code-link} links the code in your listings to the place where it is defined or documented. You register a string where it is defined, and every occurrence of this string in a listing becomes a hyperlink. It works with \T{xlistings}, with \T{listings}, and with \T{minted}, and it does not need \T{xlistings}. It has a manual of its own, \href{https://github.com/EagleoutIce/xlistings/blob/gh-pages/build/code-link-doc.pdf}{\T{code-link-doc.pdf}}. This manual uses it: every command and option in its code links to where it is documented.
+
+\subsection{Dependencies}
+
+This package loads \T{kvoptions}, \T{etoolbox}, \T{xcolor}, \T{pgfkeys}, \T{lstautogobble}, and \T{listings}, and the following on demand:
+
+\begin{itemize}[leftmargin=*]
+    \item \T{needspace} for \argref{guardspace}{guardspace}
+    \item \T{tikz} for \argref{highlights}{highlights}
+    \item \T{listingsutf8} and \T{accsupp}, if installed. Without \T{accsupp}, line numbers stay selectable; without \T{listingsutf8}, you lose the UTF-8 support.
+\end{itemize}
+
+All of these packages are part of common \LaTeX{} distributions.
+    
+\section{Package Options}
+
+\newcommand\graytext[1]{{\color{xlst@colors@lst@comments}#1}}
+\lstcolorlet{command}{accent}
+% a literate, typeset and indexed; #1 is the sort key, #2 the text
+\newcommand\lit[2]{\CodeLinkAnchor[group=lit]{#1}\T{#2}\index{#1@{\ttfamily\protect\xlstGetStyle{numbers}#2}\space(literate)|hyperpage}}
+\newcommand\lits[1]{\lit{#1}{#1}}
+\newenvironment{argument}[2][]{\medskip\par\noindent\CodeLinkAnchor[group=opt]{#2}\T{\xlstGetStyle{keywordA}#2}\hfill\graytext{\small\textit{#1package option}}\index{#2@{\ttfamily\protect\xlstGetStyle{keywordA}#2}\space(option)|hyperpage}\\*\noindent\ignorespaces}{}
+\newenvironment{lstkey}[1]{\medskip\par\noindent\CodeLinkAnchor[group=opt]{#1}\T{\xlstGetStyle{keywordA}#1}\hfill\graytext{\small\textit{listings key}}\index{#1@{\ttfamily\protect\xlstGetStyle{keywordA}#1}\space(listings key)|hyperpage}\\*\noindent\ignorespaces}{}
+
+
+\newenvironment{command}[2]{\medskip\par\noindent\CodeLinkAnchor[group=cmd,command]{#1}\index{#1@{\ttfamily\protect\xlstGetStyle{command}\textbackslash#1}|hyperpage}\T{\xlstGetStyle{command}\textbackslash#1}\,\graytext{\T{#2}}\\*\noindent\ignorespaces}{}
+
+\begin{argument}{print}
+    Saves ink: code blocks get no background, and certain keywords are bold or italic so they stay readable in monochrome prints.
+    See also \argref{digital}{digital} for the complementary option.
+\end{argument}
+
+\begin{argument}[default, ]{digital}
+    The opposite of \argref{print}{print}, and the default.
+\end{argument}
+
+\begin{argument}[default, ]{guardspace}
+    Keeps the first lines of a listing together with its start, so a bordered block does not begin with a stray stripe at the bottom of a page. The number of lines is set with \cmdref{xlstguard}. On by default; \T{guardspace=false} disables it.
+\end{argument}
+
+\makeatletter
+\begin{argument}{numinpar}
+    Shorthand for \cmdref{xlstSetLeftMargin} with the value \enquote{\@@xlst@numinpar@length}.
+    It can be used to automatically indent listings and prevent numbers from protruding beyond the document margin.
+\end{argument}
+
+\begin{argument}[default, ]{hlnumbers}
+    Highlights numbers in code blocks. On by default; \T{hlnumbers=false} disables it.
+\end{argument}
+
+\begin{argument}{upshape}
+    Inline commands normally follow the surrounding text and may be italic. This option forces an upright shape. For the font size, see \argref{inlinesize}{inlinesize}.
+\end{argument}
+
+\begin{argument}{inlinesize}
+    Inline commands normally adapt to the surrounding font size. This option fixes the size instead; set it with \cmdref{lstfs}. For the font shape, see \argref{upshape}{upshape}.
+\end{argument}
+
+\begin{argument}{highlights}
+    Loads \href{https://ctan.org/pkg/tikz}{tikz} to highlight code segments with a color or a background (see the end of \cref{sec:writing-language}). Work in progress.
+\end{argument}
+
+\begin{argument}[default, ]{fakeminted}
+    Provides a replacement \blatex{minted} environment.
+    A language that is not loaded yet is loaded on demand, so
+    \blatex{\\begin\{minted\}\{<lang>\}} works without a preceding
+    \cmdref{LoadLanguages}; if no definition can be found, you get an error
+    naming the language. On by default; \T{fakeminted=false} disables it.
+\end{argument}
+
+\begin{argument}{extendednums}
+    Extends the number highlighting beyond plain decimals:
+
+    \begin{itemize}[leftmargin=*]
+        \item digit separators: \bjava{10_234}
+        \item the classic \T{0x}-, \T{0b}- and \T{0o}-prefixes (upper case
+              variants included), where the prefix itself uses the
+              \T{numprefix} style: \bjava{0x1A}, \bjava{0b1010}, \bjava{0o17}
+        \item the letters of a hexadecimal literal: \bjava{0xdeadBEEF}
+        \item exponents and type suffixes: \bjava{1e10}, \bjava{1.5f},
+              \bjava{10L}
+    \end{itemize}
+
+    A letter is only ever taken as part of a number if it directly follows a
+    highlighted number, so \bjava{data1} and \bjava{x0xFF} stay untouched.
+
+    Which letters may end a number depends on the language and is configured
+    with the listings key \argref{number suffixes}{number suffixes}, which defaults to \T{eE}:
+    \T{10L} is a long in Java, \T{3j} a complex number in Python, \T{10n} a
+    BigInt in TypeScript, and in prose \T{3d} is a \enquote{d} behind a
+    three. A language switches the letters off completely with
+    \blatex{number suffixes=\{\}}.
+\end{argument}
+
+\begin{argument}{debug}
+    Prints debug information to the console.
+\end{argument}
+
+\begin{argument}[string, ]{style}
+    Selects the default style, like \cmdref{xlstsetstyle}. The default is \T{default}.
+\end{argument}
+
+\section{Usage}\label{sec:usage}
+
+After loading the package as described in \cref{sec:loading-pkg},
+you can load a language with \cmdref{LoadLanguages}:
+\begin{minted}{latex}
+\LoadLanguages{la:c:tex,ja:c:va,ba:c:sh,js:c:on}
+\end{minted}
+This uses the opinionated language definitions in the \T{langs/} folder and provides them to you in a set of environments and commands:
+\begin{itemize}[leftmargin=*]
+    \item\phantomsection\label{use:env} As \blatex{\\begin\{<lang>\}}, \blatex{\\begin\{<lang>*\}}, and \blatex{\\begin\{plain<lang>\}} environments. For example, with the before loaded languages you have:
+\begin{minted}{latex}
+\begin{java}
+...
+\end{java}
+\end{minted}
+    \item\phantomsection\label{use:inline} As \langcmd{c}{\{<code>\}} and \langcmd{b}{\{<code>\}} commands, e.g., \clatex{\\cjava\{int i\}} and \blatex{\\bjava\{int i\}}.
+    \item\phantomsection\label{use:input} As \langcmd{i}{\{<file>\}} command to include a file.
+    \item As \blatex{\\xlstc\{<lang>\}\{<code>\}}, \blatex{\\xlstb\{<lang>\}\{<code>\}},
+      and \blatex{\\xlsti\{<lang>\}\{<file>\}}, which take the language as an
+      argument. This is useful to reach languages such as \T{x86} which contain numbers. 
+    \item As \blatex{\\begin\{minted\}\{<lang>\}} environment.
+\end{itemize}
+
+All inline commands (\langcmd{c}{}, \langcmd{b}{}, \langcmd{i}{}) have an advantage in that they can be used as arguments to other macros, \textit{but} you have to escape things like backslashes or curly braces with an additional backslash.
+
+If you want to register special keywords or any other configuration for an existing, and loaded, language, you can use \cmdref{xlstlangoverride}:
+
+\xlstsetstyle{plain number}
+\begingroup
+\xlstblacklistlinenumbers{4}
+\begin{minted}[autogobble]{latex}
+        \xlstlangoverride{latex}{
+            morekeywords=[5]{\\commandA, \\commandB},
+            lineskip=42pt,
+            % ...
+        }
+\end{minted}
+\endgroup
+
+As you can see, the sample above skips a given line number, which we achieve by using the following command: \blatex{\\xlstblacklistlinenumbers\{4\}}.
+The effects of all of these commands are local, so you can use them in a group (e.g., with \blatex{\\begingroup} and \blatex{\\endgroup} or an opening and closing brace) to limit their effect.
+
+Additionally, if you look at the source of this documentation, the source of the example above is actually indented. We remove the leading spaces with the new \T{autogobble} option (provided by the \href{https://ctan.org/pkg/lstaddons}{lstautogobble} package).
+
+In the \T{latex} language, a hyphen is part of a word, so \T{round-precision} can be a keyword.
+A command right after a hyphen is still highlighted on its own (\argref{xlstcsbreak}{xlstcsbreak}):
+
+\begin{minted}{latex}
+\xlstlangoverride{latex}{morekeywords=[3]{round-precision}}
+\end{minted}
+
+\begingroup
+\xlstlangoverride{latex}{morekeywords=[3]{round-precision}}
+\begin{minted}{latex}
+\sisetup{round-precision=2}\vspace{-\baselineskip}
+\end{minted}
+\endgroup
+
+The keys \blatex{alsoletter} and \blatex{alsoother} replace the characters of the language instead of adding to them, so repeat them when you change them. For \T{latex}, these are:
+
+\begin{minted}{latex}
+alsoletter={\\\#@*-}, alsoother={!,"_^}
+\end{minted}
+
+If you want to add new literates for whatever reason, you can use the new listings key \argref{add to literate}{add to literate}:
+
+\begin{minted}{latex}
+\lstset{
+    add to literate={sample}{\(\mathcolor{red}{\pi}\)}{1}
+}
+\end{minted}
+
+\begingroup
+\lstset{
+    add to literate={sample}{\(\mathcolor{red}{\pi}\)}{1}
+}
+
+With this active, writing \T{sample} will result in \bjava{sample} (you can combine this with \cmdref{xlstlangoverride} to add literates to a specific language).
+\endgroup
+
+If you want to change the colors of the keywords used, you can use \cmdref{lstcolorlet} with the keys \T{keywordA}, \T{keywordB}, \T{keywordC}, \T{numbers}, \T{numprefix}, \T{literals}, \T{comments}, \T{highlight}, \T{command}, and \T{linenumbers}:
+
+\begin{minted}{latex}
+\lstcolorlet{comments}{orange}
+\end{minted}
+\begingroup
+\lstcolorlet{comments}{orange}
+
+With this, the color of comments will be changed to orange:
+
+\begin{minted}{latex}
+% sample comment 
+\end{minted}
+\endgroup
+
+If you want to have complete control over the styling, you may use \cmdref{xlstDefineStyles} which works like the following:
+
+\begin{minted}{latex}
+\xlstDefineStyles{%
+    {comments: \color{green}\bfseries},%
+}
+\end{minted}
+
+\begingroup
+\xlstDefineStyles{%
+    {comments: \color{green}\bfseries},%
+}
+
+Now, comments will be displayed in green and bold:
+\begin{minted}{latex}
+% sample comment 
+\end{minted}
+
+\textit{This command is currently rather rigid and subject to change!}
+
+\endgroup
+
+\needspace{18\baselineskip}
+\section{Default Literates}\label{sec:literates}
+
+A \emph{literate} replaces a character sequence by typeset material. The following ones are available in every listing, so you can write in plain text what listings cannot express, and they are the reason a few sequences, such as \T{:to:}, are unusable verbatim.
+
+\begin{center}
+\small\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}l@{\hspace{1.5em}}l@{\hspace{1.5em}}p{6.2cm}@{}}
+  \toprule
+  \textbf{Input} & \textbf{Result} & \textbf{Meaning}\\
+  \midrule
+  \lits{:ldots:}, \lits{:cdots:}, \lits{:cdot:} & \bjava{:ldots:}, \bjava{:cdots:}, \bjava{:cdot:} & ellipsis, centered ellipsis and dot\\
+  \lits{:to:}, \lits{:yields:} & \bjava{:to:}, \bjava{:yields:} & arrows\\
+  \lits{:lan:}, \lits{:ran:} & \bjava{:lan:}, \bjava{:ran:} & angle brackets\\
+  \lits{:equiv:}, \lits{:circ:} & \bjava{:equiv:}, \bjava{:circ:} & \(\equiv\) and \(\circ\)\\
+  \lit{:<:}{:<:}, \lit{:>:}{:>:} & \bjava{:<:}, \bjava{:>:} & gray angle brackets\\
+  \lits{:lambda:} & \bjava{:lambda:} & a lambda\\
+  \lits{:br:} & \bjava{a:br:} & a marker for a line break, not copied\\
+  \lits{:bs:} & \bjava{:bs:} & a backslash in the keyword color\\
+  \lits{:bcmd:}, \lits{:ecmd:} & \bjava{:bcmd:}\bjava{x:ecmd:} & begin and end of a colored command\\
+  \lits{:percent:}, \CodeLinkAnchor[group=lit]{:!:}\T{:!:}\index{:"!:@{\ttfamily\protect\xlstGetStyle{numbers}:"!:}\space(literate)|hyperpage} & \bjava{:percent:}, \bjava{:!:} & characters that are special to your language\\
+  \lits{:star:}, \lits{:minus:}, \lits{:ul:} & \bjava{:star:}, \bjava{:minus:}, \bjava{:ul:} & \T{*}, \T{-}, \T{\_}\\
+  \lits{:dollar:}, \lits{:bmath:}, \lits{:emath:} & \bjava{:dollar:}, \bjava{:bmath:}, \bjava{:emath:} & a dollar in the number color\\
+  \lits{:plaindollar:} & \bjava{:plaindollar:} & a plain dollar\\
+  \lits{:lmath:}, \lits{:rmath:}, \lits{:ldmath:}, \lits{:rdmath:} & \bjava{:lmath:}, \bjava{:rmath:}, \bjava{:ldmath:}, \bjava{:rdmath:} & the math delimiters of \LaTeX{}\\
+  \lits{:float:}, \lits{:exp:} & \bjava{1:float:}, \bjava{1:exp:} & suffix letters in the number color\\
+  \lits{:space:}, \lits{:ws:} & \bjava{a:space:b} & an explicit space\\
+  \lits{:c:} & \bjava{in:c:t} & nothing, but it ends the current token, so no keyword or number is recognized across it\\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+Beyond these, the following are always available:
+\begin{itemize}[leftmargin=*]
+  \item Digits and decimal points, which are the basis of the \argref{hlnumbers}{hlnumbers} option. With \argref{extendednums}{extendednums}, the digit separator \T{\_} and the prefixes \T{0x}, \T{0b}, and \T{0o} join them.
+  \item Accented letters, which \T{listings} cannot handle on its own: \bjava{x ä ö ü Ä Ö Ü ß á é í ó ú Á É à è ì ò ù â ê î ô û ñ Ñ ã õ ç Ç å Å æ Æ ø œ Œ € £ ¿ ¡}. An inline command must not \emph{start} with such a letter, which is a limitation of \T{listings} itself; environments have no such restriction.
+  \item Language specific literates, listed below, and the string escapes (\bjava{\\n}, \bjava{\\t}, \ldots) of the \T{C}-like languages.
+\end{itemize}
+
+The following literates belong to a single language:
+
+\begin{center}
+\small\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}l@{\hspace{1.5em}}l@{\hspace{1.5em}}l@{\hspace{1.5em}}p{4.6cm}@{}}
+  \toprule
+  \textbf{Language} & \textbf{Input} & \textbf{Result} & \textbf{Meaning}\\
+  \midrule
+  \T{bash} & \lits{:bashdollar:} & \bbash{:bashdollar:} & a dollar in the keyword color\\
+           & \lits{:asyncamp:} & \bbash{:asyncamp:} & an ampersand that is no operator\\
+  \midrule
+  \T{lc} & \lit{:-alpha->:}{:-alpha->:}, \lit{:-eta->:}{:-eta->:} & \blc{:-alpha->:}, \blc{:-eta->:} & conversion arrows\\
+         & \lit{:-beta->:}{:-beta->:}, \lit{:-beta5->:}{:-beta5->:} & \blc{:-beta->:}, \blc{:-beta5->:} & reduction arrows\\
+  \midrule
+  \T{tac} & \lit{:_0:}{:\_0:}, \ldots, \lit{:_9:}{:\_9:} & \btac{x:_0:}, \ldots, \btac{x:_9:} & a gray subscript digit\\
+          & \lit{:__:}{:\_\_:} & \btac{x:__:} & an empty subscript\\
+  \midrule
+  \T{mips} & \lit{:hide$:}{:hide\$:} & \bmips{:hide\$:} & nothing; it hides a dollar that would highlight a register\\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+Further ones can be added with \argref{add to literate}{add to literate}, as shown in \cref{sec:usage}.
+
+\section{Writing a Language}\label{sec:writing-language}
+
+A language lives in a file \T{xlistings-<name>.cfg} which is picked up by
+\cmdref{LoadLanguages} and consists of an ordinary \blatex{\\lstdefinelanguage}
+followed by \cmdref{RegisterLanguage}:
+
+\begin{minted}{latex}
+\lstdefinelanguage{lRubberduck}{
+    comment=[l]{\#},
+    morekeywords = {Quack, new},
+    morekeywords = [2]{Duck}
+}
+\RegisterLanguage{rubberduck}{lRubberduck}
+\end{minted}
+
+Keep the following in mind when you write such a file:
+
+\begin{itemize}[leftmargin=*]
+    \item The name of the \T{listings} language starts with an \enquote{l}
+          followed by an upper case letter (\T{lRubberduck}) so that it never
+          collides with a language that \T{listings} ships itself. The name you
+          register (\T{rubberduck}) is the one used for the environments, the
+          inline commands, the \T{minted} environment, and
+          \cmdref{xlstlangoverride}.
+    \item Use only the public macros of this package. Language files are read
+          when \T{@} is not a letter, so \T{\textbackslash xlst@\ldots} macros
+          are not available; \cmdref{xlstGet} and \cmdref{xlstGetStyle} are.
+    \item All languages share one column model (\blatex{columns=flexible}),
+          set by the listing style. Override it only if the language
+          needs something else.
+    \item The keyword classes \T{[1]} to \T{[6]} are styled as \T{keywordA},
+          \T{keywordB}, \T{keywordC}, \T{keywordD}, \T{literals}, and
+          \T{command}. A language may set its own
+          \blatex{keywordstyle}.
+\end{itemize}
+
+The behavior of a language is pinned down by the test suite in \T{tests/}:
+\blatex{l3build check} states, per sample, which styles are expected in which
+order, and \T{build/test/<name>.pdf} shows the verdict next to the typeset
+sample so the result can be inspected by eye. A color that leaks past its
+segment does not show up in such a trace, so the checks additionally compare
+the pdf, reduced to the color every piece of text is drawn in.
+
+For segment highlighting, the macros \blatex{\\xlsthlwarning},
+\blatex{\\xlsthlerror}, and \blatex{\\xlsthlinfo} are available as delimiter
+styles (they fall back to a plain color if the \argref{highlights}{highlights}
+option is not active), as are \blatex{\\xlsthlbox\{<color>\}} and
+\blatex{\\xlsthlboxd\{<tikz keys>\}}.
+
+A segment may span several lines and may start anywhere on a line. The
+indentation in front of it stays outside the highlight, on its first line as
+well as on every further one:
+
+\begin{minted}{latex}
+\begin{ts}
+class Point {
+    |info|x = 0;|info|
+    move(dx: number) {
+        |warn|this.x = this.x
+            + dx;|warn|
+        |err|return y;|err|
+    }
+}
+\end{ts}
+\end{minted}
+
+\begin{minted}{ts}
+class Point {
+    |info|x = 0;|info|
+    move(dx: number) {
+        |warn|this.x = this.x
+            + dx;|warn|
+        |err|return y;|err|
+    }
+}
+\end{minted}
+
+\section{Full Reference}\label{sec:full-reference}
+
+All commands below act locally, so wrap them in a group to limit their effect.
+Commands that contain an \T{@} in their name are internal and not part of the interface.
+
+\subsection*{Loading and registering languages}
+
+\begin{command}{LoadLanguages}{\{<lang>,\ldots\}}
+    Loads the definitions of the given, comma-separated languages (\cmdref{LoadLanguage} is an alias). For each language, the file \T{xlistings-<lang>.cfg} is searched first in the current directory and then in \cmdref{xlstLanguageSearchPath}; the unprefixed \T{<lang>.cfg} is accepted as a fallback, so private definitions keep working. A language is loaded at most once, so definitions may require each other. If no definition is found, a warning is issued.
+\end{command}
+
+\begin{command}{xlstLanguageSearchPath}{}
+    Comma-separated list of directories searched by \cmdref{LoadLanguages}; it defaults to \T{\{langs/\}}. The file name prefix (default \T{xlistings-}) is stored in \cmdref{xlstLanguageFilePrefix}.
+\end{command}
+
+\begin{command}{RegisterLanguage}{[<aliases>]\{<name>\}\{<lst-language>\}}
+    Used by language files to register the language \T{<lst-language>} (a \T{listings} language) under \T{<name>}. This creates the environments, inline commands and (with \argref{fakeminted}{fakeminted}) the \T{minted} names described in the introduction. The optional, comma-separated aliases are additional \T{minted} names for the language.
+\end{command}
+
+\begin{command}{xlstlangoverride}{[*]\{<lang>\}\{<keys>\}}
+    Appends the \T{listings} keys to the definition of the loaded language \T{<lang>}; the starred form replaces the previous overrides instead.
+\end{command}
+
+\subsection*{Styles and colors}
+
+\begin{command}{xlstsetstyle}{\{<style>\}}
+    Selects the default style (\T{default}, \T{nonumber}, \T{plain}, or \T{plain number}), as the \argref{style}{style} option does.
+\end{command}
+
+\begin{command}{lstcolorlet}{\{<name>\}\{<color>\}}
+    Sets the color of a highlighting class to an existing color. Valid names are \T{keywordA}, \T{keywordB}, \T{keywordC}, \T{numbers}, \T{numprefix}, \T{literals}, \T{comments}, \T{highlight}, \T{command}, and \T{linenumbers}.
+\end{command}
+
+\begin{command}{lstcolordef}{[<mode>]\{<name>\}\{<code>\}}
+    Like \cmdref{lstcolorlet}, but defines the color from a color specification (the model \T{<mode>} defaults to \T{RGB}).
+\end{command}
+
+\begin{command}{xlstDefineStyles}{\{\{<class>: <code>\},\ldots\}}
+    Redefines the formatting of the given classes (\T{basic}, \T{keywordA}--\T{keywordD}, \T{numbers}, \T{linenumbers}, \T{literals}, \T{comments}, \T{highlight}, \ldots). \cmdref{xlstSetStyle}\T{\{<class>\}\{<code>\}} redefines a single one.
+\end{command}
+
+\begin{command}{xlstGetStyle}{\{<class>\}}
+    Switches to the formatting of a class; \cmdref{xlstGet}\T{\{<class>\}\{<text>\}} typesets \T{<text>} in it within a group. \cmdref{xlstStyles} shows all styles at once.
+\end{command}
+
+\subsection*{Layout}
+
+\begin{command}{xlstSetLeftMargin}{\{<length>\}}
+    Sets the left margin of listings. \cmdref{xlstSetRightMargin}, \cmdref{xlstSetNumSep} (distance of the line numbers), and \cmdref{xlstSetFrameRule} (frame width) work alike.
+\end{command}
+
+\begin{command}{lstfs}{[*][<linespread>]\{<size>\}}
+    Sets the font size (in pt) and line spread of listings; the starred form takes the size of the surrounding text. \cmdref{xlstNumFs}\T{\{<size command>\}} sets the font size of line numbers only.
+\end{command}
+
+\begin{command}{xlstguard}{\{<lines>\}}
+    Number of baseline skips that must remain on a page before a listing starts (default \T{.8}), if \argref{guardspace}{guardspace} is active.
+\end{command}
+
+\begin{command}{xlstPreBreak}{\{<code>\}}
+    Material shown at the end of a line that was broken in a listing; \cmdref{xlstInlinePreBreak} does the same for inline code.
+\end{command}
+
+\begin{command}{xlstInlineKeys}{\{<keys>\}}
+    Keys appended to every inline listing after its style, so that they win over it, for example \T{breaklines=false,prebreak=\{\}} to keep inline code from breaking.
+\end{command}
+
+\begin{command}{xlstInlineLead}{\{<material>\}}
+    Inline code opens with a thin space, which is dropped at the start of a paragraph. When a wrapper such as \T{\textbackslash href} encloses the inline code, wrap it in \T{\textbackslash xlstInlineLead} so that the space sits outside the wrapper and vanishes at a line break as well.
+\end{command}
+
+\begin{command}{xlstSetInputDefaults}{\{<keys>\}}
+    Default keys for the \langcmd{i}{} and \cmdref{xlsti} commands; \cmdref{xlstRemoveInputBackground} removes frame and background of included files.
+\end{command}
+
+\subsection*{Line numbers and numbers}
+
+\begin{command}{xlstblacklistlinenumbers}{[*]\{<numbers>\}}
+    Hides the given, comma-separated line numbers. By default (\cmdref{xlstblacklistisghost}), hidden lines do not count, so later numbers close the gap. With the starred form, or after \cmdref{xlstblacklistispresent}, later lines keep their number.
+\end{command}
+
+\begin{command}{xlstdisablenumhl}{}
+    Turns the highlighting of numbers off, \cmdref{xlstenablenumhl} turns it back on (see \argref{hlnumbers}{hlnumbers}).
+\end{command}
+
+\subsection*{Listings keys}
+
+\begin{lstkey}{add to literate}
+    Appends to the \T{literate} list instead of replacing it, as shown in \cref{sec:usage}.
+\end{lstkey}
+
+\begin{lstkey}{number suffixes}
+    Letters that may follow a number and still belong to it (default \T{eE}), if \argref{extendednums}{extendednums} is active.
+\end{lstkey}
+
+\begin{lstkey}{language addons}
+    Applies the keys given to \cmdref{xlstlangoverride} for the language. The environments and inline commands set it for you.
+\end{lstkey}
+
+\begin{lstkey}{xlstcsbreak}
+    Starts a new word at each backslash (except within \T{\textbackslash\textbackslash}), so \T{-\textbackslash baselineskip} highlights the command although the hyphen is a letter. Set by the \T{latex} language.
+\end{lstkey}
+
+\subsection*{Code environments for \T{minted}}
+
+\begin{command}{xlstmintedmap}{\{<from>\}\{<to>\}}
+    Lets the \T{minted} language \T{<from>} refer to the language \T{<to>}.
+\end{command}
+
+\begin{command}{xlstsetmintedstyle}{\{<style>\}}
+    Selects the style of \T{minted} environments (default: the current \cmdref{xlstsetstyle}).
+\end{command}
+
+\begin{command}{xlstmintedwithlangbadge}{}
+    Shows a language badge in all \T{minted} environments. \cmdref{xlstmintedwithoutlangbadge} turns it off again.
+    With \argref{fakeminted}{fakeminted}, \cmdref{BadgeNextListing}\T{\{<lang>\}} adds a badge to the next listing only, and \cmdref{xlstlangbadgestyle}\T{\{<lang>\}} is the macro that styles it.
+\end{command}
+
+\begin{command}{xlstc}{[<keys>]\{<lang>\}\{<code>\}}
+    The language-generic form of \langcmd{c}{}; \cmdref{xlstb} and \cmdref{xlsti} are the forms of \langcmd{b}{} and \langcmd{i}{}.
+\end{command}
+
+\section{Origin}
+
+Originally, this package was part of \href{https://github.com/EagleoutIce/LILLY}{\MakeUppercase{lilly}}, which I again ported to the \href{https://github.com/EagleoutIce/sopra-collection}{sopra-collection} during my studies. This package is the standalone and improved version of these packages. The process is work in progress and I welcome any kind of feedback.
+
+\needspace{8\baselineskip}
+\printindex
+
+\end{document}

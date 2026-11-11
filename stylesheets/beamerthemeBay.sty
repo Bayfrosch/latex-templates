@@ -1,0 +1,112 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{beamerthemeBay}[2026/11/11 Personal Beamer theme]
+
+\usetheme{Madrid}
+
+\RequirePackage{tcolorbox}
+\definecolor{BayPrimary}{HTML}{E57676}
+\definecolor{BayAccent}{HTML}{FBEAEA}
+\definecolor{BayHint}{HTML}{FFE68A}
+\definecolor{BayHintLight}{HTML}{FFF9E6}
+\definecolor{BaySolution}{HTML}{A2CB90}
+\definecolor{BaySolutionLight}{HTML}{F0F7ED}
+\definecolor{BayExample}{HTML}{8ACEFF}
+\definecolor{BayExampleLight}{HTML}{E6F4FF}
+\definecolor{BayCode}{HTML}{B6B6B6}
+\definecolor{BayCodeLight}{HTML}{E7E7E7}
+\definecolor{BayCodePurple}{HTML}{B92EFF}
+\definecolor{BayCodeType}{HTML}{F77F08}
+\definecolor{BayText}{HTML}{34383D}
+\definecolor{BayNumber}{HTML}{AE2424}
+\definecolor{BaySelectedText}{HTML}{FFFFFF}
+
+\setbeamercolor{structure}{fg=BayPrimary}
+\setbeamercolor{title}{fg=BayText,bg=white}
+\setbeamercolor{frametitle}{fg=BayText,bg=white}
+\setbeamercolor{alerted text}{fg=BayPrimary!65!black}
+\setbeamercolor{example text}{fg=BayExample!55!black}
+\setbeamertemplate{itemize items}[circle]
+\setbeamercolor{itemize item}{fg=BayText}
+\setbeamercolor{itemize subitem}{fg=BayText}
+\setbeamercolor{itemize subsubitem}{fg=BayText}
+\setbeamertemplate{enumerate items}[default]
+\setbeamercolor{enumerate item}{fg=BayNumber}
+\setbeamercolor{enumerate subitem}{fg=BayNumber}
+\setbeamercolor{enumerate subsubitem}{fg=BayNumber}
+\setbeamercolor{block title}{fg=black,bg=BayPrimary!80!gray}
+\setbeamercolor{block body}{fg=black,bg=BayAccent!80!lightgray}
+\setbeamercolor{block title example}{fg=black,bg=BayExample!80!gray}
+\setbeamercolor{block body example}{fg=black,bg=BayExampleLight!80!lightgray}
+\setbeamercolor{block title alerted}{fg=black,bg=BayHint!80!gray}
+\setbeamercolor{block body alerted}{fg=black,bg=BayHintLight!80!lightgray}
+\setbeamerfont{title}{size=\fontsize{28}{34},series=\bfseries}
+\setbeamerfont{author}{size=\large}
+\setbeamerfont{date}{size=\small}
+\setbeamercolor{author}{fg=BayText}
+\setbeamercolor{date}{fg=BayText!65!white}
+\setbeamertemplate{title page}{%
+  \hspace*{.05\textwidth}%
+  \begin{minipage}{.9\textwidth}
+    \raggedright
+    {\color{BayPrimary}\rule{1.5cm}{3pt}\par}
+    \vskip1em
+    {\usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle\par}
+    \vskip1.6em
+    {\usebeamerfont{author}\usebeamercolor[fg]{author}\insertauthor\par}
+    \vskip.4em
+    {\usebeamerfont{date}\usebeamercolor[fg]{date}\insertdate\par}
+  \end{minipage}}
+\setbeamertemplate{frametitle}{%
+  \vskip.4em%
+  \usebeamerfont{frametitle}\usebeamercolor[fg]{frametitle}%
+  \insertframetitle\par\vskip.2em}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+\AtBeginSection{}
+\AtBeginSubsection{}
+
+% Apply after the frame body so explicit frame titles cannot hide the subsection.
+% This hook also runs for fragile frames and each overlay.
+\AtEndEnvironment{beamer@frameslide}{%
+  \ifbeamer@plainframe\else
+    \ifx\insertsubsection\@empty\else
+      \frametitle{{\color{BayNumber}\thesection.\thesubsection}\enspace\insertsubsection}%
+    \fi
+  \fi}
+
+\setbeamercolor{author in head/foot}{fg=black,bg=BayPrimary}
+\setbeamercolor{section in head/foot}{fg=black,bg=BayPrimary}
+\setbeamerfont{author in head/foot}{size=\fontsize{12}{14}\selectfont}
+\setbeamerfont{section in head/foot}{size=\fontsize{12}{14}\selectfont}
+\setbeamertemplate{section in head/foot}{%
+  {\color{BaySelectedText}\strut\insertsectionhead}}
+\setbeamertemplate{section in head/foot shaded}{\strut\insertsectionhead}
+% Use Beamer's navigation entries with fixed gaps instead of stretched spacing.
+\newcommand{\bay@sectionnavigation}{%
+  \begingroup
+  \usebeamerfont{section in head/foot}\usebeamercolor[fg]{section in head/foot}%
+  \def\slideentry##1##2##3##4##5##6{}%
+  \def\sectionentry##1##2##3##4##5{%
+    \ifnum##5=\c@part
+      \hskip1.25em%
+      \def\insertsectionhead{##1.\ ##2}%
+      \hyperlink{Navigation##3}{%
+        \ifnum##1=\c@section
+          \usebeamertemplate{section in head/foot}%
+        \else
+          \usebeamertemplate{section in head/foot shaded}%
+        \fi}%
+    \fi}%
+  \dohead
+  \endgroup}
+\setbeamertemplate{footline}{%
+  \leavevmode\hbox{%
+    \begin{tcolorbox}[width=\paperwidth,
+      colback=BayPrimary,colframe=BayPrimary,coltext=black,
+      sharp corners,boxrule=0pt,boxsep=0pt,
+      left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
+      before skip=0pt,after skip=0pt]
+      \hbox to \linewidth{%
+        \usebeamerfont{author in head/foot}\insertshortauthor\hfill%
+        \bay@sectionnavigation}%
+    \end{tcolorbox}}}

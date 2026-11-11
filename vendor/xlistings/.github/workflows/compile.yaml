@@ -1,0 +1,79 @@
+name: Compile the showcases
+'on':
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: texlive/texlive:latest
+    steps:
+    - name: Checkout git repository
+      uses: actions/checkout@v4
+    - name: ✅ Run the test suite
+      run: sh both.sh check
+    - name: 🔍 Upload the test output for inspection
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-output
+        path: |
+          build/test*/**/*.pdf
+          build/test*/**/*.diff
+        if-no-files-found: ignore
+
+  build:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout git repository
+      uses: actions/checkout@v4
+      with:
+        lfs: true
+        submodules: true
+    - name: 🔍 Fetch the test output
+      continue-on-error: true
+      uses: actions/download-artifact@v4
+      with:
+        name: test-output
+        path: build
+    - name: ⏱️ Benchmark of code-link
+      uses: xu-cheng/latex-action@v3
+      with:
+        latexmk_use_lualatex: false
+        latexmk_shell_escape: true
+        work_in_root_file_dir: false
+        root_file: bench/bench.tex
+        pre_compile: sh bench/run.sh
+        post_compile: "true"
+    - name: 📄 Compile Documentation
+      uses: xu-cheng/latex-action@v3
+      with:
+        latexmk_shell_escape: true
+        root_file: |
+          xlistings-doc.tex
+          code-link-doc.tex
+    - name: Install PU for previews
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: poppler-utils
+        version: 1.0
+    - name: 🖼️ Generate preview
+      run: |
+         pdftoppm -png -r 300 -f 1 ./build/xlistings-doc.pdf preview
+    - name: Commit
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add -f "build/xlistings-doc.pdf" "build/code-link-doc.pdf" "bench/bench-results-*.tex" "bench/bench-summary.tex" "preview-*.png"
+        git add -f build/test/*.pdf build/test-*/*/*.pdf || true
+        git commit -m "Newly compiled data"
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        branch: gh-pages
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        force: true

@@ -1,0 +1,84 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{baybeamer}[2026/11/11 Personal presentation class]
+
+\newif\ifbay@animated
+\newif\ifbay@handout
+\PassOptionsToClass{aspectratio=169}{beamer}
+\DeclareOption{animated}{\bay@animatedtrue}
+\DeclareOption{handout}{\bay@handouttrue}
+\DeclareOption*{\PassOptionsToClass{\CurrentOption}{beamer}}
+\ProcessOptions\relax
+\ifbay@animated
+  \ifbay@handout
+    \ClassError{baybeamer}{Options animated and handout are mutually exclusive}
+      {Select animated for overlays or handout for printable slides.}
+  \fi
+\fi
+\ifbay@handout
+  \PassOptionsToClass{handout}{beamer}
+\fi
+\LoadClass{beamer}
+\usetheme{Bay}
+
+\RequirePackage{iftex}
+\ifLuaTeX\else
+  \ClassError{baybeamer}{LuaLaTeX is required for the Fira fonts}
+    {Use make, or compile this document with LuaLaTeX.}
+\fi
+\usefonttheme{professionalfonts}
+\RequirePackage[sfdefault,lining]{FiraSans}
+\RequirePackage[lining]{FiraMono}
+\newfontfamily\BayCodeFont{FiraCode-Regular.ttf}[
+  BoldFont=FiraCode-Bold.ttf,
+  ItalicFont=FiraCode-Regular.ttf,ItalicFeatures={FakeSlant=.2},
+  BoldItalicFont=FiraCode-Bold.ttf,BoldItalicFeatures={FakeSlant=.2}]
+% Florian Sihler's unmodified package is bundled in vendor/xlistings.
+% Attribution, license, and source revision: THIRD_PARTY_NOTICES.md.
+\RequirePackage[guardspace=false,fakeminted=false]{xlistings}
+\LoadLanguages{java,haskell,python}
+% The surrounding box supplies the border and background.
+\lstdefinestyle{baycode}{frame=none,backgroundcolor={},
+  xleftmargin=2em,xrightmargin=0pt,aboveskip=0pt,belowskip=0pt,
+  identifierstyle=\color{black},
+  keywordstyle=[7]{\BayCodeFont\small\color{BayCodeType}}}
+\xlstlangoverride{java}{style=baycode,
+  keywordstyle=[2]{\BayCodeFont\small\color{BayCodeType}},
+  deletekeywords=[2]{this,super},morekeywords={this,super}}
+\xlstlangoverride{haskell}{style=baycode,
+  deletekeywords={Bool,Char,Double,Float,Int,Integer,IO,String},
+  morekeywords=[7]{Bool,Char,Double,Float,Int,Integer,IO,String}}
+\xlstlangoverride{python}{style=baycode,
+  deletekeywords=[2]{bool,bytearray,bytes,complex,dict,float,frozenset,int,list,memoryview,object,set,slice,str,tuple,type},
+  morekeywords=[7]{bool,bytearray,bytes,complex,dict,float,frozenset,int,list,memoryview,object,set,slice,str,tuple,type}}
+\xlstSetStyle{basic}{\BayCodeFont\small}
+\xlstNumFs{\scriptsize}
+\xlstSetStyle{keywordA}{\color{BayPrimary!65!black}\bfseries}
+\xlstSetStyle{keywordB}{\color{BayPrimary!65!black}}
+\xlstSetStyle{keywordC}{\color{BayPrimary!65!black}}
+\xlstSetStyle{keywordD}{\color{BayPrimary!65!black}\itshape}
+\xlstSetStyle{numbers}{\color{BayPrimary}}
+\xlstSetStyle{numprefix}{\color{BayPrimary}}
+\xlstSetStyle{literals}{\color{BayCodePurple!75!black}}
+\xlstSetStyle{comments}{\color{BayCodePurple!60!black}\itshape}
+\xlstSetStyle{linenumbers}{\color{BayCode!55!black}\scriptsize\sffamily}
+\xlstSetStyle{command}{\color{BayPrimary!65!black}}
+\xlstSetStyle{highlight}{\color{BayPrimary!65!black}\bfseries}
+
+\tcbset{baybox/.style={
+  colback=white,colbacktitle=#1!80!gray,colframe=#1!80!gray,
+  coltitle=black,coltext=black,fonttitle=\bfseries,
+  boxrule=0.6pt,arc=1mm,left=2mm,right=2mm,top=1mm,bottom=1mm,
+  before skip=6pt,after skip=6pt}}
+\tcbset{baycodebox/.style={baybox=BayCode,
+  colframe=BayCode,colbacktitle=BayCode,colback=BayCodeLight}}
+\tcolorboxenvironment{java}{baycodebox,title={Code: Java}}
+\tcolorboxenvironment{haskell}{baycodebox,title={Code: Haskell}}
+\tcolorboxenvironment{python}{baycodebox,title={Code: Python}}
+\newtcolorbox{definitionbox}[2][]{baybox=BayPrimary,
+  colback=BayAccent!80!lightgray,title={Definition: #2},#1}
+\newtcolorbox{examplebox}[2][]{baybox=BayExample,
+  colback=BayExampleLight!80!lightgray,title={Example: #2},#1}
+\newtcolorbox{hintbox}[2][]{baybox=BayHint,
+  colback=BayHintLight!80!lightgray,title={Hint: #2},#1}
+\newtcolorbox{solutionbox}[2][]{baybox=BaySolution,
+  colback=BaySolutionLight!80!lightgray,title={Solution: #2},#1}
