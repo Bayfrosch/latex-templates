@@ -1,3 +1,9 @@
+# Copyright (C) 2026 Bayfrosch.
+# This file is part of Bay templates and may be distributed and/or modified
+# under the LaTeX Project Public License, version 1.3c or (at your option)
+# any later version. The complete work is listed in LICENSE.md.
+# See LICENSE for the full license text.
+
 """Build standalone LaTeX documents discovered in an input directory."""
 import argparse
 import os
@@ -57,14 +63,13 @@ def build(input_dir, output_dir, target):
     env.setdefault('BAY_TEMPLATES', str(ROOT))
     # Resolve before changing to the source directory for relative images/inputs.
     env['BAY_TEMPLATES'] = str(Path(env['BAY_TEMPLATES']).resolve())
-    # Keep LuaLaTeX's generated font cache with the build artifacts.
-    cache = output_dir / '.tex-cache'
-    cache.mkdir(parents=True, exist_ok=True)
-    env.setdefault('TEXMFCACHE', str(cache))
-    env.setdefault('TEXMFVAR', str(cache))
     for source, mode, cls in jobs:
         destination = output_dir / source.relative_to(input_dir).with_suffix('')
         destination.mkdir(parents=True, exist_ok=True)
+        # MiKTeX restricts LuaLaTeX cache writes to the document's output directory.
+        job_env = env.copy()
+        job_env.setdefault('TEXMFCACHE', destination.as_posix())
+        job_env.setdefault('TEXMFVAR', destination.as_posix())
         jobname = source.stem + (f'-{mode}' if mode else '')
         command = ['latexmk', '-norc', '-r', str(ROOT / '.latexmkrc'),
                    '-lualatex' if mode or cls == 'baysheet' else '-pdf',
@@ -75,7 +80,7 @@ def build(input_dir, output_dir, target):
                            r'}\PassOptionsToClass{' + mode + r'}{baybeamer}')
         command.append(source.name)
         print(f'Building {source} -> {destination / (jobname + ".pdf")}', flush=True)
-        subprocess.run(command, cwd=source.parent, env=env, check=True)
+        subprocess.run(command, cwd=source.parent, env=job_env, check=True)
 
 
 def main():

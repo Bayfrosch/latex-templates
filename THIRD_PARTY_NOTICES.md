@@ -1,3 +1,11 @@
+<!--
+Copyright (C) 2026 Bayfrosch.
+This file is part of Bay templates and may be distributed and/or modified
+under the LaTeX Project Public License, version 1.3c or (at your option)
+any later version. The complete work is listed in LICENSE.md.
+See LICENSE for the full license text.
+-->
+
 # Third-party software
 
 ## xlistings by Florian Sihler
@@ -14,7 +22,7 @@
 `vendor/xlistings/` is a complete, unmodified snapshot of the tracked upstream
 repository at the revision above, including its language definitions, manuals,
 tests, copyright notices, and license. Git history is not included. Local
-presentation customization lives in `stylesheets/baybeamer.cls`; upstream
+listing customization lives in `stylesheets/baycontent.sty`; upstream
 sources have not been changed. The bundled code-link package is not loaded.
 
 When redistributing the bundled dependency, retain this notice and the complete
@@ -48,5 +56,6 @@ from the TeX distribution's `fira` package and are not bundled here.
 
 Beamer, tcolorbox, listings, and the other packages loaded by them or xlistings
 are supplied by your TeX distribution, rather than copied into this repository.
-Their licenses and notices remain in that distribution. This notice does not
-relicense those packages or assign a license to the original template files.
+Their licenses and notices remain in that distribution. These third-party
+licenses are separate from the LPPL license for the original Bay templates
+files listed in [LICENSE.md](LICENSE.md).
