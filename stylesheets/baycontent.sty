@@ -25,7 +25,7 @@
 \RequirePackage[guardspace=false,fakeminted=false]{xlistings}
 \LoadLanguages{java,haskell,python}
 % The surrounding box supplies the border and background.
-\lstdefinestyle{baycode}{frame=none,backgroundcolor={},
+\lstdefinestyle{baycode}{frame=none,backgroundcolor={},numbers=left,numbersep=.75em,
   xleftmargin=2em,xrightmargin=0pt,aboveskip=0pt,belowskip=0pt,
   identifierstyle=\color{black},
   keywordstyle=[7]{\BayCodeFont\small\color{BayCodeType}}}
@@ -62,6 +62,17 @@
 \tcolorboxenvironment{java}{baycodebox,title={Code: Java}}
 \tcolorboxenvironment{haskell}{baycodebox,title={Code: Haskell}}
 \tcolorboxenvironment{python}{baycodebox,title={Code: Python}}
+\newtcolorbox{codebox}[2][]{baycodebox,title={Code: #2},
+  lower separated=true,#1}
+% Switch panels before the listing environment opens its own group.
+\AddToHook{env/terminal/before}{\tcblower}
+\newcommand{\bay@terminalprompt}[1]{{\BayCodeFont\small\color{BayText!65!white}\textgreater}}
+\lstnewenvironment{terminal}
+  {\lstset{style=baycode,language={},literate={},numbers=left,
+    numberstyle=\bay@terminalprompt,stepnumber=1,numberblanklines=true,
+    basicstyle=\BayCodeFont\small\color{BayText},
+    columns=fullflexible,keepspaces=true,showstringspaces=false,breaklines=true,
+    mathescape=false,texcl=false,escapeinside={}{},escapebegin={},escapeend={}}}{}
 \newtcolorbox{definitionbox}[2][]{baybox=BayPrimary,
   colback=BayAccent!80!lightgray,title={Definition: #2},#1}
 \newtcolorbox{examplebox}[2][]{baybox=BayExample,

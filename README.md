@@ -110,6 +110,30 @@ Your content goes here.
 \end{examplebox}
 ```
 
+### Code with terminal input and output
+
+Use `codebox` with `plainhaskell`, `plainpython`, or `plainjava` for the code.
+Add `terminal` inside the box to print commands and output below a divider:
+
+```latex
+\begin{codebox}{Haskell}
+\begin{plainhaskell}
+f x y = x + y
+\end{plainhaskell}
+\begin{terminal}
+f 1 2
+3
+\end{terminal}
+\end{codebox}
+```
+
+The argument `{Haskell}` sets the box title.\
+Choose the matching `plain...` environment for syntax highlighting.\
+In Beamer, put the box in a `\begin{frame}[fragile]` frame.\
+Omit `terminal` for a code-only box.
+Code lines are numbered. Each terminal line gets a `>` prefix automatically;
+write the terminal text without adding the prefix yourself.
+
 ## License and credits
 
 The original templates, theme, build scripts, and documentation are licensed

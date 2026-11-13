@@ -77,6 +77,7 @@
 \bay@unnumberedbox{examplebox}
 \bay@unnumberedbox{hintbox}
 \bay@unnumberedbox{solutionbox}
+\bay@unnumberedbox{codebox}
 \bay@unnumberedbox{java}
 \bay@unnumberedbox{haskell}
 \bay@unnumberedbox{python}
