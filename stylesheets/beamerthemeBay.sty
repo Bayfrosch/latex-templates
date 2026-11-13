@@ -9,7 +9,6 @@
 
 \usetheme{Madrid}
 
-\RequirePackage{tcolorbox}
 \RequirePackage{baycolors}
 
 \setbeamercolor{structure}{fg=BayPrimary}
@@ -66,12 +65,12 @@
     \fi
   \fi}
 
-\setbeamercolor{author in head/foot}{fg=black,bg=BayPrimary}
-\setbeamercolor{section in head/foot}{fg=black,bg=BayPrimary}
-\setbeamerfont{author in head/foot}{size=\fontsize{12}{14}\selectfont}
-\setbeamerfont{section in head/foot}{size=\fontsize{12}{14}\selectfont}
+\setbeamercolor{author in head/foot}{fg=BayText!70!white,bg=white}
+\setbeamercolor{section in head/foot}{fg=BayText!70!white,bg=white}
+\setbeamerfont{author in head/foot}{size=\fontsize{9}{11},series=\mdseries}
+\setbeamerfont{section in head/foot}{size=\fontsize{9}{11},series=\mdseries}
 \setbeamertemplate{section in head/foot}{%
-  {\color{BaySelectedText}\strut\insertsectionhead}}
+  {\color{BayNumber}\bfseries\strut\insertsectionhead}}
 \setbeamertemplate{section in head/foot shaded}{\strut\insertsectionhead}
 % Use Beamer's navigation entries with fixed gaps instead of stretched spacing.
 \newcommand{\bay@sectionnavigation}{%
@@ -92,13 +91,14 @@
   \dohead
   \endgroup}
 \setbeamertemplate{footline}{%
-  \leavevmode\hbox{%
-    \begin{tcolorbox}[width=\paperwidth,
-      colback=BayPrimary,colframe=BayPrimary,coltext=black,
-      sharp corners,boxrule=0pt,boxsep=0pt,
-      left=2mm,right=2mm,top=1.5mm,bottom=1.5mm,
-      before skip=0pt,after skip=0pt]
-      \hbox to \linewidth{%
-        \usebeamerfont{author in head/foot}\insertshortauthor\hfill%
-        \bay@sectionnavigation}%
-    \end{tcolorbox}}}
+  \leavevmode\usebeamerfont{author in head/foot}%
+  \vbox{%
+    \hbox{%
+      \hskip\beamer@leftmargin%
+      {\color{BayText!20!white}%
+        \rule{\dimexpr\paperwidth-\beamer@leftmargin-\beamer@rightmargin\relax}{.3pt}}}%
+    \nointerlineskip%
+    \begin{beamercolorbox}[wd=\paperwidth,ht=3.2ex,dp=1.6ex,
+      leftskip=\beamer@leftmargin,rightskip=\beamer@rightmargin]{author in head/foot}%
+      \insertshortauthor\hfill\bay@sectionnavigation%
+    \end{beamercolorbox}}}
