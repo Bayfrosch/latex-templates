@@ -14,6 +14,30 @@ Both classes provide custom colorboxes for definitions, examples and hints. They
 
 ## Preview
 
+**Title:** A clean title layout with an accent line, author name, and date.
+
+![Title layout with author and date](images/title.png)
+
+**Definition:** A red box for key terms and definitions.
+
+![Red definition box explaining a pure function](images/definition.png)
+
+**Example:** A blue box for examples, including mathematical notation.
+
+![Blue example box showing how to square a number](images/example.png)
+
+**Hint:** A yellow box for tips and guidance.
+
+![Yellow hint box with advice for working through a calculation](images/hint.png)
+
+**Solution:** A green box for worked answers and calculations.
+
+![Green solution box with a worked sum of squares](images/solution.png)
+
+**Code:** Syntax-highlighted code with line numbers and optional terminal input and output.
+
+![Haskell code boxes with line numbers and terminal input and output](images/codeblock.png)
+
 ## Requirements
 This repository builds PDFs in a Docker container. Install Docker and the Docker
 Compose plugin (`docker compose`). Docker Desktop includes Compose; on Windows,
