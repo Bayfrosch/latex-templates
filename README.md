@@ -15,7 +15,27 @@ Both classes provide custom colorboxes for definitions, examples and hints. They
 ## Preview
 
 ## Requirements
-This repository uses a docker container to  build the pdf files. Therefore, the only required installation is Docker running with Linux containers enabled.
+This repository builds PDFs in a Docker container. Install Docker and the Docker
+Compose plugin (`docker compose`). Docker Desktop includes Compose; on Windows,
+enable Linux containers.
+
+On Ubuntu, if Docker was installed as the Ubuntu `docker.io` package, install
+Compose from Ubuntu's repositories:
+
+```sh
+sudo apt update
+sudo apt install docker-compose-v2
+```
+
+If Docker was installed from Docker's official apt repository, install
+`docker-compose-plugin` instead, following the
+[Docker Compose installation instructions](https://docs.docker.com/compose/install/linux/).
+
+Verify the installation before building:
+
+```sh
+docker compose version
+```
 
 ## Quick start
 This repo provides two latex classes to use:
@@ -29,11 +49,12 @@ To build them, open a terminal in the root folder of the repository and run:
 docker compose run --rm latex
 ```
 
-This builds every standalone document in `import/` into `build/`.
+This builds every standalone document in `import/` into `build/docker/`.
 
 ## Build PDFs
 
-Start Docker Desktop with Linux containers enabled. From this folder, run:
+Ensure Docker is running (Docker Engine on Ubuntu, or Docker Desktop with Linux
+containers enabled on Windows). From this folder, run:
 
 ```sh
 docker compose run --rm latex
