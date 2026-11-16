@@ -9,5 +9,6 @@ OUTDIR ?= build/docker
 
 .PHONY: all presentation animated handout documents
 all presentation animated handout documents:
+	@docker compose version || (echo "Docker Compose is required. See README.md Requirements for installation instructions." && exit 1)
 	docker compose run --rm latex --input "$(INPUT_DIR)" --output "$(OUTDIR)" --target $@
 
