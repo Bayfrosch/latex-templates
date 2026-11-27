@@ -141,11 +141,16 @@ For sheets, set the running header with:
 \sheetheader{Your header}
 ```
 
-To change the sheet layout and choose from one or two columns, use:
+Sheets default to `onecolumn` and `linenumbers`. Choose `onecolumn` or
+`twocolumn` for the layout, and `linenumbers` or `nolinenumbers` for the
+numbers beside body text. For example, this makes a two-column sheet with
+prose line numbers hidden.
 
 ```latex
-\documentclass[onecolumn/twocolumn]{baysheet}
+\documentclass[twocolumn,nolinenumbers]{baysheet}
 ```
+
+Tables and their captions are excluded from prose line numbering.
 
 Use `definitionbox`, `examplebox`, `hintbox`, or `solutionbox`:
 

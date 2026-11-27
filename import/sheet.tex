@@ -5,7 +5,8 @@
 % See LICENSE for the full license text.
 
 % Choose onecolumn (default) or twocolumn.
-\documentclass[onecolumn]{baysheet}
+% Choose linenumbers (default) or nolinenumbers for body text.
+\documentclass[onecolumn,nolinenumbers]{baysheet}
 
 \title{Test Title}
 \author{Your full name}
@@ -31,6 +32,15 @@ does not change any state outside the function.
 For the input $[1,2,3,4]$, square each value and then add the results.
 The sum is $1+4+9+16=30$. Inline identifiers such as
 \texttt{sum\_of\_squares} use Fira Mono.
+
+\begin{center}
+\begin{tabular}{lrrrr}
+Input  & 1 & 2 & 3 & 4 \\
+Square & 1 & 4 & 9 & 16
+\end{tabular}
+\end{center}
+
+The table summarizes the four squares used in the sum.
 
 \begin{examplebox}{Squaring a number}
 The function $f(x)=x^2$ maps $4$ to $16$ every time it is evaluated.
